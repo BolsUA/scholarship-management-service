@@ -5,12 +5,11 @@ import enum
 
 # Enum for scholarship status
 class ScholarshipStatus(enum.Enum):
-    draft = "draft"
-    purposed = "purposed"
-    review = "review"
-    open = "open"
-    jury_evaluation = "jury_evaluation"
-    closed = "closed"
+    draft = "Draft"
+    under_review = "Under Review"
+    open = "Open"
+    jury_evaluation = "Jury Evaluation"
+    closed = "Closed"
 
 class ScholarshipScientificAreaLink(SQLModel, table=True):
     scholarship_id: Optional[int] = Field(default=None, foreign_key="scholarship.id", primary_key=True)

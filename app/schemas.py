@@ -4,12 +4,11 @@ from datetime import date, datetime
 from enum import Enum
 
 class ScholarshipStatus(str, Enum):
-    draft = "draft"
-    purposed = "purposed"
-    review = "review"
-    open = "open"
-    jury_evaluation = "jury_evaluation"
-    closed = "closed"
+    draft = "Draft"
+    under_review = "Purposed"
+    open = "Open"
+    jury_evaluation = "Jury Evaluation"
+    closed = "Closed"
 
 class ScientificAreaBase(BaseModel):
     name: str

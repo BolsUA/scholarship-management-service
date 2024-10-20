@@ -30,32 +30,21 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
 def create_dummy_scholarships(db: SessionDep):
-    statement = select(models.ScientificArea).where(models.ScientificArea.name == "Computer Science")
-    computer_science_area = db.exec(statement).first()
-    
-    if not computer_science_area:
-        computer_science_area = models.ScientificArea(name="Computer Science")
-        db.add(computer_science_area)
-        db.commit()
-        db.refresh(computer_science_area)
+    areas_to_create = ["Computer Science", "Biology", "Physics"]
+    scientific_areas = {}
 
-    statement = select(models.ScientificArea).where(models.ScientificArea.name == "Biology")
-    biology = db.exec(statement).first()
-    
-    if not biology:
-        biology_area = models.ScientificArea(name="Biology")
-        db.add(biology_area)
-        db.commit()
-        db.refresh(biology_area)
-
-    statement = select(models.ScientificArea).where(models.ScientificArea.name == "Physics")
-    physics_area = db.exec(statement).first()
-    
-    if not physics_area:
-        physics_area = models.ScientificArea(name="Physics")
-        db.add(physics_area)
-        db.commit()
-        db.refresh(physics_area)
+    # Iterate over the areas to create or fetch them from the database
+    for area_name in areas_to_create:
+        statement = select(models.ScientificArea).where(models.ScientificArea.name == area_name)
+        area = db.exec(statement).first()
+        
+        if not area:
+            area = models.ScientificArea(name=area_name)
+            db.add(area)
+            db.commit()
+            db.refresh(area)
+        
+        scientific_areas[area_name] = area
 
     # Define dummy scholarships
     dummy_scholarships = [
@@ -63,26 +52,39 @@ def create_dummy_scholarships(db: SessionDep):
             name="Scholarship A",
             description="A brief description of Scholarship A.",
             publisher="University of XYZ",
-            scientific_areas=[biology],  # Change this if you have scientific area data
+            scientific_areas=[scientific_areas["Biology"]],  # Change this if you have scientific area data
             type="Research Initiation Scholarship",
             deadline=date(2024, 12, 31),
             created_at=datetime.today(),
             approved_at=None,
             results_at=None,
-            status=models.ScholarshipStatus.draft,
+            status=models.ScholarshipStatus.jury_evaluation,
             edict_id=None
         ),
         models.Scholarship(
             name="Scholarship B",
             description="A brief description of Scholarship B.",
             publisher="Institute of ABC",
-            scientific_areas=[computer_science_area, physics_area],  # Change this if you have scientific area data
+            scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
             type="Research Scholarship",
             deadline=date(2024, 11, 15),
             created_at=datetime.today(),
             approved_at=None,
             results_at=None,
-            status=models.ScholarshipStatus.purposed,
+            status=models.ScholarshipStatus.open,
+            edict_id=None
+        ),
+        models.Scholarship(
+            name="Scholarship C",
+            description="A brief description of Scholarship C.",
+            publisher="Bla bla",
+            scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
+            type="Research Scholarship",
+            deadline=date(2024, 11, 15),
+            created_at=datetime.today(),
+            approved_at=None,
+            results_at=None,
+            status=models.ScholarshipStatus.closed,
             edict_id=None
         )
     ]
@@ -90,7 +92,10 @@ def create_dummy_scholarships(db: SessionDep):
     # Insert dummy scholarships into the database
     db.add_all(dummy_scholarships)
     db.commit()
-    db.refresh(dummy_scholarships)
+    # Refresh each scholarship individually
+    for scholarship in dummy_scholarships:
+        db.refresh(scholarship)
+
     return dummy_scholarships
 
 # Endpoint to retrieve all scholarships
