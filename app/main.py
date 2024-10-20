@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated
 from fastapi import FastAPI, HTTPException, Depends
 from sqlmodel import Session, SQLModel, select
@@ -9,6 +10,16 @@ from datetime import date, datetime
 SQLModel.metadata.create_all(engine)
 
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True})
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Dependency to get DB session
 def get_session():
@@ -79,6 +90,7 @@ def create_dummy_scholarships(db: SessionDep):
     # Insert dummy scholarships into the database
     db.add_all(dummy_scholarships)
     db.commit()
+    db.refresh(dummy_scholarships)
     return dummy_scholarships
 
 # Endpoint to retrieve all scholarships
