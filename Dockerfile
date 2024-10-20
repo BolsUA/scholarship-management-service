@@ -9,7 +9,7 @@ WORKDIR /scholarship_management
 RUN chown -R appuser:appgroup /scholarship_management
 
 # Copy the requirements file
-COPY ./app ./
+COPY ./app ./app
 COPY ./requirements.txt ./
 COPY ./wait_for_db.py ./
 
