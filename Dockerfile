@@ -5,7 +5,9 @@ FROM python:3.9-slim
 WORKDIR /scholarship_management
 
 # Copy the requirements file
-COPY ./ ./
+COPY ./app ./
+COPY ./requirements.txt ./
+COPY ./wait_for_db.py ./
 
 # Expose the port FastAPI runs on
 EXPOSE 8000
