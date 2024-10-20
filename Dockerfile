@@ -1,8 +1,17 @@
-FROM python:3.9
+# Use an official Python runtime as the base image
+FROM python:3.9-slim
 
-WORKDIR /app
-COPY . /app
+# Set the working directory
+WORKDIR /scholarship_management
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the requirements file
+COPY ./ ./
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+# Expose the port FastAPI runs on
+EXPOSE 8000
+
+# Install dependencies
+# RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
+
+CMD ["sh", "-c", "python3 wait_for_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
