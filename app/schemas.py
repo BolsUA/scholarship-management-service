@@ -25,7 +25,7 @@ class ScientificArea(ScientificAreaBase):
 class EdictBase(BaseModel):
     name: str
     description: Optional[str] = None
-    publication_date: Optional[date] = None
+    publication_date: Optional[datetime] = None
 
 class EdictCreate(EdictBase):
     pass
