@@ -25,7 +25,7 @@ class Edict(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     name: str = Field(nullable=False)
     file_path: str = Field(nullable=False)
-    publication_date: Optional[date] = Field(default=None)
+    publication_date: datetime = Field(default_factory=datetime.now, nullable=False)
 
     scholarships: List["Scholarship"] = Relationship(back_populates="edict")
 
