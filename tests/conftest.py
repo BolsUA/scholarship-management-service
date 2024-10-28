@@ -19,7 +19,7 @@ def session_fixture(engine):
         yield session
 
 # Create a TestClient that uses the test session
-@pytest.fixture(name="client")
+@pytest.fixture(name="client", scope="function")
 def client_fixture(session):
     # Override the get_session dependency
     def get_session_override():
