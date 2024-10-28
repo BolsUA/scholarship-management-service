@@ -5,7 +5,8 @@ from enum import Enum
 
 class ScholarshipStatus(str, Enum):
     draft = "Draft"
-    under_review = "Purposed"
+    purposed = "Purposed"
+    under_review = "Under Review"
     open = "Open"
     jury_evaluation = "Jury Evaluation"
     closed = "Closed"
@@ -20,7 +21,7 @@ class ScientificArea(ScientificAreaBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EdictBase(BaseModel):
     name: str
@@ -34,7 +35,7 @@ class Edict(EdictBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes  = True
 
 class DocumentTemplateBase(BaseModel):
     name: str
@@ -48,7 +49,7 @@ class DocumentTemplate(DocumentTemplateBase):
     scholarship_id: int  # Linking to the scholarship it belongs to
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ScholarshipBase(BaseModel):
     name: str
@@ -73,4 +74,11 @@ class Scholarship(ScholarshipBase):
     documents: List[DocumentTemplate] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class FilterOptionsResponse(BaseModel):
+    types: List[str]
+    scientific_areas: List[str]
+    statuses: List[ScholarshipStatus]
+    publishers: List[str]
+    deadlines: List[date]

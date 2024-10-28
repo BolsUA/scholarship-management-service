@@ -1,16 +1,21 @@
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Optional
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
 from sqlmodel import Session, SQLModel, select
 from .database import engine
 from . import models, schemas
 from datetime import date, datetime
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 
-# Create all tables in the database (if they don't exist already)
-SQLModel.metadata.create_all(engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup event
+    SQLModel.metadata.create_all(engine)
+    yield
 
-app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True})
+app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan)
 
 origins = ["*"]
 
@@ -101,11 +106,74 @@ def create_dummy_scholarships(db: SessionDep):
 
 # Endpoint to retrieve all scholarships
 @app.get("/scholarships", response_model=List[schemas.Scholarship])
-def get_scholarships(db: SessionDep, page: int = 1, limit: int = 10):
+def get_scholarships(
+    db: SessionDep, 
+    page: int = 1, 
+    limit: int = 10,
+    name: Optional[str] = Query(None),
+    status: Optional[models.ScholarshipStatus] = Query(None),
+    scientific_area: Optional[str] = Query(None),
+    publisher: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+    deadline_after: Optional[date] = Query(None)
+    ):
+
     offset = (page - 1) * limit
-    statement = select(models.Scholarship).offset(offset).limit(limit)
+
+    statement = select(models.Scholarship)
+
+    if name:
+        statement = statement.where(models.Scholarship.name == name)
+    if status:
+        statement = statement.where(models.Scholarship.status == status)
+    if publisher:
+        statement = statement.where(models.Scholarship.publisher == publisher)
+    if type:
+        statement = statement.where(models.Scholarship.type == type)
+    if deadline_after:
+        statement = statement.where(models.Scholarship.deadline >= deadline_after)
+    if scientific_area:
+        # Join with the scientific area model to filter by area name
+        statement = (
+            statement.join(models.ScholarshipScientificAreaLink)
+            .join(models.ScientificArea)
+            .where(models.ScientificArea.name == scientific_area)
+        )
+
+    statement = statement.offset(offset).limit(limit)
+
     results = db.exec(statement).all()
+
     return results
+
+@app.get("/scholarships/filters", response_model=schemas.FilterOptionsResponse)
+def get_filter_options(db: SessionDep):
+    # Retrieve distinct types of scholarships
+    types = db.exec(select(models.Scholarship.type).distinct()).all()
+    types = [t for t in types if t]  # Extract values from tuples and exclude None
+
+    # Retrieve all scientific areas
+    scientific_areas = db.exec(select(models.ScientificArea.name)).all()
+    scientific_areas = [sa for sa in scientific_areas if sa]
+
+    # Get all possible statuses from the ScholarshipStatus enum
+    statuses = [schemas.ScholarshipStatus(status.value) for status in models.ScholarshipStatus]
+
+    # Retrieve distinct publishers
+    publishers = db.exec(select(models.Scholarship.publisher).distinct()).all()
+    publishers = [p for p in publishers if p]
+
+    # Retrieve distinct deadlines
+    deadlines = db.exec(select(models.Scholarship.deadline).distinct()).all()
+    deadlines = [d for d in deadlines if d]
+
+    return schemas.FilterOptionsResponse(
+        types=types,
+        scientific_areas=scientific_areas,
+        statuses=statuses,
+        publishers=publishers,
+        deadlines=deadlines,
+    )
 
 # Endpoint to retrieve a single scholarship by ID
 @app.get("/scholarships/{id}", response_model=schemas.Scholarship)
