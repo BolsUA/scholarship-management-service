@@ -49,4 +49,4 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
         run: |
           python3 wait_for_db.py
-          pytest tests/ --color=yes --verbose --pyargs app 
+          pytest tests/ --color=yes --verbose

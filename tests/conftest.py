@@ -3,8 +3,8 @@
 import pytest
 from sqlmodel import SQLModel, Session
 from fastapi.testclient import TestClient
-from .main import app, get_session
-from .database import engine
+from app.main import app, get_session
+from app.database import engine
 
 # Create a test database in memory
 @pytest.fixture(name="engine", scope="function")
