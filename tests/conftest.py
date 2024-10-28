@@ -1,16 +1,19 @@
 # tests/conftest.py
 
 import pytest
-from sqlmodel import SQLModel, Session
+from sqlmodel import SQLModel, Session, create_engine
 from fastapi.testclient import TestClient
 from app.main import app, get_session
-from app.database import engine
 
 # Create a test database in memory
 @pytest.fixture(name="engine", scope="function")
 def engine_fixture():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False, "foreign_keys": "ON"},
+    )
     SQLModel.metadata.create_all(engine)
-    return engine
+    yield engine
 
 # Create a new session for each test
 @pytest.fixture(name="session", scope="function")
