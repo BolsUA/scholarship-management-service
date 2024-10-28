@@ -22,7 +22,7 @@ def session_fixture(engine):
     session.rollback()
 
 # Create a TestClient that uses the test session
-@pytest.fixture(name="client", scope="function")
+@pytest.fixture(name="client", scope="session")
 def client_fixture(session):
     # Override the get_session dependency
     def get_session_override():
