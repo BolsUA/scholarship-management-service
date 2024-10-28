@@ -14,6 +14,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgres:13
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 3
+
     steps:
       - uses: actions/checkout@v2
 
@@ -30,6 +45,7 @@ jobs:
           pip install httpx
 
       - name: Run Tests
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
         run: |
           python3 wait_for_db.py
           pytest tests/ --color=yes --verbose
