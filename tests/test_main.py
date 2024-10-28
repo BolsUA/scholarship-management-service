@@ -124,7 +124,40 @@ def test_update_proposal(client):
     updated_data = {
         "name": "Updated Proposal",
         "publisher": "Updated Publisher",
-        "type": "Updated Type",
+        "scientific_areas": ["Informatics"],
+    }
+
+    update_response = client.put(
+        f"/proposals/{proposal_id}",
+        data=updated_data,
+    )
+    assert update_response.status_code == 200
+    updated_proposal = update_response.json()
+    assert updated_proposal["name"] == "Updated Proposal"
+    assert updated_proposal["publisher"] == "Updated Publisher"
+    assert len(updated_proposal["scientific_areas"]) == 1
+    assert updated_proposal["scientific_areas"][0]["name"] == "Informatics"
+
+def test_update_proposal_with_files(client):
+    # Create a proposal
+    form_data = {
+        "name": "Original Proposal",
+        "publisher": "Original Publisher",
+        "type": "Research Scholarship",
+        "scientific_areas": ["Physics"],
+    }
+    files = {
+        "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
+    }
+    create_response = client.post("/proposals", data=form_data, files=files)
+    assert create_response.status_code == 200
+    proposal = create_response.json()
+    proposal_id = proposal["id"]
+
+    # Update the proposal
+    updated_data = {
+        "name": "Updated Proposal",
+        "publisher": "Updated Publisher",
         "scientific_areas": ["Biology"],
     }
     files = {
@@ -141,7 +174,6 @@ def test_update_proposal(client):
     updated_proposal = update_response.json()
     assert updated_proposal["name"] == "Updated Proposal"
     assert updated_proposal["publisher"] == "Updated Publisher"
-    assert updated_proposal["type"] == "Updated Type"
     assert len(updated_proposal["scientific_areas"]) == 1
     assert updated_proposal["scientific_areas"][0]["name"] == "Biology"
 

@@ -196,7 +196,7 @@ def create_proposal(
     deadline: Optional[date] = Form(None),
     scientific_areas: List[str] = Form(None),
     edict_file: UploadFile = File(...),
-    file: Optional[UploadFile] = File(None)
+    file: Optional[List[UploadFile]] = File(None)
 ):
     # Query the database for scientific areas based on the provided names
     associated_scientific_areas = []
@@ -239,40 +239,49 @@ def create_proposal(
         raise HTTPException(status_code=500, detail="Failed to retrieve proposal ID.")
 
     if file:
-        create_document(db, new_proposal.id, file)
+        for f in file:
+            create_document(db, new_proposal.id, f)
 
     return new_proposal
 
 # Endpoint to update an existing proposal
 @app.put("/proposals/{proposal_id}", response_model=schemas.Scholarship)
 def update_proposal(
-    proposal_id: int,
-    updated_proposal: schemas.ScholarshipCreate,
     db: SessionDep,
-    edict_file: Optional[UploadFile] = File(None),
-    document_file: Optional[UploadFile] = File(None),
-    scientific_areas: List[str] = Form(...),
+    proposal_id: int,
+    name: Optional[str] = None,
+    jury: Optional[str] = None,
+    status: Optional[str] = None,
+    deadline: Optional[date] = None,
+    type: Optional[str] = None,
+    publisher: Optional[str] = None,
+    description: Optional[str] = None,
+    edict_file: Optional[UploadFile] = None,
+    document_file: Optional[List[UploadFile]] = None,
+    scientific_areas: Optional[List[str]] = None,
 ):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     # Update the proposal's fields if provided in the request
-    proposal.name = updated_proposal.name if updated_proposal.name is not None else proposal.name
-    proposal.description = updated_proposal.description if updated_proposal.description is not None else proposal.description
-    proposal.publisher = updated_proposal.publisher if updated_proposal.publisher is not None else proposal.publisher
-    proposal.type = updated_proposal.type if updated_proposal.type is not None else proposal.type
-    proposal.jury = updated_proposal.jury if updated_proposal.jury is not None else proposal.jury
-    proposal.deadline = updated_proposal.deadline if updated_proposal.deadline is not None else proposal.deadline
-    proposal.status = updated_proposal.status if updated_proposal.status is not None else proposal.status
-
-    # Update edict file if provided
+    proposal.name = name if name is not None else proposal.name
+    proposal.description = description if description is not None else proposal.description
+    proposal.publisher = publisher if publisher is not None else proposal.publisher
+    proposal.type = type if type is not None else proposal.type
+    proposal.jury = jury if jury is not None else proposal.jury
+    proposal.deadline = deadline if deadline is not None else proposal.deadline
+    proposal.status = models.ScholarshipStatus(status) if status is not None else proposal.status
+    # proposal.scientific_areas = scientific_areas if scientific_areas is not None else proposal.scientific_areas
+      
+    # Update edict file if provided and not empty
     if edict_file:
         create_edict_record(db, edict_file)
 
-    # Update document file if provided
+    # Update document file(s) if provided and not empty
     if document_file:
-        create_document(db, proposal.id, document_file)
+        for doc in document_file:
+            create_document(db, proposal.id, doc)
 
     db.commit()
     db.refresh(proposal)
