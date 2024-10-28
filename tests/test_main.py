@@ -13,17 +13,12 @@ def test_create_dummy_scholarships(client):
     assert "Scholarship C" in names
 
 def test_get_scholarships_without_filters(client):
-    # Create dummy scholarships
-    client.post("/scholarships/dummy")
-
     response = client.get("/scholarships")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 3  # All three scholarships should be returned
+    assert len(data) == 3
 
 def test_get_scholarships_with_name_filter(client):
-    client.post("/scholarships/dummy")
-
     response = client.get("/scholarships", params={"name": "Scholarship A"})
     assert response.status_code == 200
     data = response.json()
@@ -31,8 +26,6 @@ def test_get_scholarships_with_name_filter(client):
     assert data[0]["name"] == "Scholarship A"
 
 def test_get_scholarships_with_status_filter(client):
-    client.post("/scholarships/dummy")
-
     response = client.get("/scholarships", params={"status": "Open"})
     assert response.status_code == 200
     data = response.json()
@@ -40,8 +33,6 @@ def test_get_scholarships_with_status_filter(client):
     assert data[0]["status"] == "Open"
 
 def test_get_scholarships_with_scientific_area_filter(client):
-    client.post("/scholarships/dummy")
-
     response = client.get("/scholarships", params={"scientific_area": "Biology"})
     assert response.status_code == 200
     data = response.json()
@@ -50,8 +41,6 @@ def test_get_scholarships_with_scientific_area_filter(client):
     assert "Biology" in areas
 
 def test_get_scholarships_filters(client):
-    client.post("/scholarships/dummy")
-
     response = client.get("/scholarships/filters")
     assert response.status_code == 200
     data = response.json()
