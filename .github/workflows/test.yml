@@ -45,7 +45,8 @@ jobs:
           pip install httpx
 
       - name: Run Tests
-        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
         run: |
           python3 wait_for_db.py
           pytest tests/ --color=yes --verbose
