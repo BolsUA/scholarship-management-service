@@ -131,8 +131,10 @@ def test_update_proposal(client):
         f"/proposals/{proposal_id}",
         data=updated_data,
     )
+
     assert update_response.status_code == 200
     updated_proposal = update_response.json()
+    print(updated_proposal)
     assert updated_proposal["name"] == "Updated Proposal"
     assert updated_proposal["publisher"] == "Updated Publisher"
     assert len(updated_proposal["scientific_areas"]) == 1
