@@ -226,7 +226,7 @@ def create_proposal(
         type=type,
         jury=jury,
         deadline=deadline,
-        status=models.ScholarshipStatus.open,
+        status=models.ScholarshipStatus.draft,
         edict_id=new_edict.id,
         scientific_areas=associated_scientific_areas
     )
