@@ -176,7 +176,7 @@ def get_filter_options(db: SessionDep):
     )
 
 # Endpoint to retrieve a single scholarship by ID
-@app.get("/scholarships/{id}", response_model=schemas.Scholarship)
+@app.get("/scholarships/{id}/details", response_model=schemas.Scholarship)
 def get_scholarship(id: int, db: SessionDep):
     statement = select(models.Scholarship).where(models.Scholarship.id == id)
     result = db.exec(statement).first()

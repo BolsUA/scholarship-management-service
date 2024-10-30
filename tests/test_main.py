@@ -56,7 +56,7 @@ def test_get_scholarship_by_id(client):
     scholarships = response.json()
     scholarship_id = scholarships[0]["id"]
 
-    response = client.get(f"/scholarships/{scholarship_id}")
+    response = client.get(f"/scholarships/{scholarship_id}/details")
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == scholarship_id
