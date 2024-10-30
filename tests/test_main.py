@@ -214,7 +214,8 @@ def test_submit_proposal_missing_fields(client):
     # Create a proposal with missing required fields
     form_data = {
         "name": "Incomplete Proposal",
-        # Missing 'publisher' and 'type'
+        "publisher": "Publisher 1",
+        "type": "Research Scholarship",
         "scientific_areas": ["Computer Science"],
     }
     files = {
