@@ -251,7 +251,7 @@ def update_proposal(
     name: Optional[str] = Form(None),
     jury: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
-    deadline: Optional[str] = Form(None),  # Accept as string and parse to date
+    deadline: Optional[str] = Form(None),
     type: Optional[str] = Form(None),
     publisher: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
@@ -263,13 +263,23 @@ def update_proposal(
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
+    if deadline is not None:
+        try:
+            # Assuming the deadline is in 'YYYY-MM-DD' format
+            deadline_datetime = datetime.strptime(deadline, '%Y-%m-%d')
+            proposal.deadline = deadline_datetime if deadline_datetime is not None else proposal.deadline
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid date format for deadline. Expected 'YYYY-MM-DD'."
+            )
+
     # Update the proposal's fields if provided in the request
     proposal.name = name if name is not None else proposal.name
     proposal.description = description if description is not None else proposal.description
     proposal.publisher = publisher if publisher is not None else proposal.publisher
     proposal.type = type if type is not None else proposal.type
     proposal.jury = jury if jury is not None else proposal.jury
-    proposal.deadline = deadline if deadline is not None else proposal.deadline
     proposal.status = models.ScholarshipStatus(status) if status is not None else proposal.status
 
     if scientific_areas:
@@ -303,7 +313,7 @@ def submit_proposal(proposal_id: int, db: SessionDep):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if proposal.status not in [models.ScholarshipStatus.draft, models.ScholarshipStatus.under_review]:
+    if models.ScholarshipStatus(proposal.status) not in [models.ScholarshipStatus.draft, models.ScholarshipStatus.under_review]:
         raise HTTPException(status_code=400, detail="Cannot submit a proposal that is not in draft or under review status.")
 
     # Check if all required fields are filled before submission
