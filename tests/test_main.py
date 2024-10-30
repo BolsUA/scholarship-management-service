@@ -204,6 +204,12 @@ def test_submit_proposal(client):
     proposal = create_response.json()
     proposal_id = proposal["id"]
 
+    update_response = client.put(
+        f"/proposals/{proposal_id}",
+        json={"deadline": "2023-10-31"},
+    )
+    assert update_response.status_code == 200
+
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
     assert response.status_code == 200
@@ -231,7 +237,7 @@ def test_submit_proposal_missing_fields(client):
     response = client.post(f"/proposals/{proposal_id}/submit")
     assert response.status_code == 400
     data = response.json()
-    assert "Cannot submit proposal" in data["detail"]
+    assert "Cannot submit a proposal" in data["detail"]
 
 def test_submit_proposal_invalid_status(client):
     # Create a proposal and set its status to 'closed'
