@@ -213,6 +213,7 @@ def test_submit_proposal(client):
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
     data = response.json()
+    print(data['detail'])
     assert response.status_code == 200
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
 
@@ -245,7 +246,8 @@ def test_submit_proposal_invalid_status(client):
         "name": "Proposal with Closed Status",
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Physics"]
+        "scientific_areas": ["Physics"],
+        "deadline": "2023-10-31"
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
