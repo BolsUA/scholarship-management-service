@@ -206,7 +206,7 @@ def test_submit_proposal(client):
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        json={"deadline": "2023-10-31"},
+        data={"deadline": "2023-10-31"},
     )
     assert update_response.status_code == 200
 
@@ -261,7 +261,7 @@ def test_submit_proposal_invalid_status(client):
     # Manually update the status to 'closed'
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        json={"status": "Closed"},
+        data={"status": "Closed"},
     )
     assert update_response.status_code == 200
 

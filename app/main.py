@@ -268,6 +268,7 @@ def update_proposal(
             # Assuming the deadline is in 'YYYY-MM-DD' format
             deadline_datetime = datetime.strptime(deadline, '%Y-%m-%d')
             proposal.deadline = deadline_datetime if deadline_datetime is not None else proposal.deadline
+            print(proposal.deadline)
         except ValueError:
             raise HTTPException(
                 status_code=400,
