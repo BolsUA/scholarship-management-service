@@ -129,7 +129,7 @@ def test_update_proposal(client):
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        data=updated_data,
+        data=[updated_data],
     )
 
     assert update_response.status_code == 200
