@@ -249,16 +249,16 @@ def create_proposal(
 def update_proposal(
     db: SessionDep,
     proposal_id: int,
-    name: Optional[str] = None,
-    jury: Optional[str] = None,
-    status: Optional[str] = None,
-    deadline: Optional[date] = None,
-    type: Optional[str] = None,
-    publisher: Optional[str] = None,
-    description: Optional[str] = None,
-    edict_file: Optional[UploadFile] = None,
-    document_file: Optional[List[UploadFile]] = None,
-    scientific_areas: Optional[List[str]] = None,
+    name: Optional[str] = Form(None),
+    jury: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    deadline: Optional[str] = Form(None),  # Accept as string and parse to date
+    type: Optional[str] = Form(None),
+    publisher: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    edict_file: Optional[UploadFile] = File(None),
+    document_file: Optional[List[UploadFile]] = File(None),
+    scientific_areas: Optional[List[str]] = Form(None)
 ):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:

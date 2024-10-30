@@ -127,9 +127,18 @@ def test_update_proposal(client):
         "scientific_areas": ["Informatics"],
     }
 
+    # Prepare data for multipart/form-data
+    multipart_data = []
+    for key, value in updated_data.items():
+        if isinstance(value, list):
+            for item in value:
+                multipart_data.append((key, (None, item)))
+        else:
+            multipart_data.append((key, (None, value)))
+
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        data=[updated_data],
+        files=multipart_data,  # Use 'files' to send multipart/form-data
     )
 
     assert update_response.status_code == 200
