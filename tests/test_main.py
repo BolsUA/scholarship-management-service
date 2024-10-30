@@ -169,7 +169,7 @@ def test_update_proposal_with_files(client):
     update_response = client.put(
         f"/proposals/{proposal_id}",
         data=multipart_form_data(updated_data),
-        files=files,
+        files=multipart_form_data(files),
     )
     assert update_response.status_code == 200
     updated_proposal = update_response.json()
@@ -199,14 +199,13 @@ def test_submit_proposal(client):
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
         "file": ("document.pdf", b"document content", "application/pdf"),
     }
-    create_response = client.post("/proposals", data=form_data, files=files)
+    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=multipart_form_data(files))
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
 
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
-    print(create_response.details)
     assert response.status_code == 200
     data = response.json()
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
@@ -245,7 +244,7 @@ def test_submit_proposal_invalid_status(client):
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
         "file": ("document.pdf", b"document content", "application/pdf"),
     }
-    create_response = client.post("/proposals", data=form_data, files=files)
+    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=multipart_form_data(files))
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
