@@ -237,7 +237,7 @@ def test_submit_proposal_missing_fields(client):
     response = client.post(f"/proposals/{proposal_id}/submit")
     assert response.status_code == 400
     data = response.json()
-    assert "Cannot submit a proposal" in data["detail"]
+    assert "Cannot submit proposal" in data["detail"]
 
 def test_submit_proposal_invalid_status(client):
     # Create a proposal and set its status to 'closed'
