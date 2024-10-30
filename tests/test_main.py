@@ -115,7 +115,7 @@ def test_update_proposal(client):
     files = {
         "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
     }
-    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=files)
+    create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
@@ -129,7 +129,7 @@ def test_update_proposal(client):
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        files=updated_data,  # Use 'files' to send multipart/form-data
+        data=updated_data,
     )
 
     assert update_response.status_code == 200
@@ -168,7 +168,7 @@ def test_update_proposal_with_files(client):
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        data=multipart_form_data(updated_data),
+        data=updated_data,
         files=files,
     )
     assert update_response.status_code == 200
