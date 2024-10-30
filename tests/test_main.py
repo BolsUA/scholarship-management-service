@@ -63,7 +63,7 @@ def test_get_scholarship_by_id(client):
     assert data["name"] == scholarships[0]["name"]
 
 def test_get_scholarship_by_invalid_id(client):
-    response = client.get("/scholarships/9999")  # Assuming this ID doesn't exist
+    response = client.get("/scholarships/9999/details")  # Assuming this ID doesn't exist
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "Scholarship not found"
