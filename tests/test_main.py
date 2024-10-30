@@ -212,8 +212,9 @@ def test_submit_proposal(client):
 
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
-    assert response.status_code == 200
     data = response.json()
+    print(data['message'])
+    assert response.status_code == 200
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
 
 def test_submit_proposal_missing_fields(client):
