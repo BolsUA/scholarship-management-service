@@ -95,10 +95,10 @@ def test_create_proposal_missing_fields(client):
     form_data = {
         "publisher": "Test Publisher",  # Missing 'name'
         "type": "Research Scholarship",
-        "scientific_areas": ["Computer Science"],
+        "scientific_areas": ["Computer Science"]
     }
     files = {
-        "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
+        "edict_file": ("edict.pdf", b"dummy content", "application/pdf")
     }
 
     response = client.post("/proposals", data=form_data, files=files)
@@ -110,10 +110,10 @@ def test_update_proposal(client):
         "name": "Original Proposal",
         "publisher": "Original Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Physics"],
+        "scientific_areas": ["Physics"]
     }
     files = {
-        "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
+        "edict_file": ("edict.pdf", b"dummy content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
@@ -124,12 +124,12 @@ def test_update_proposal(client):
     updated_data = {
         "name": "Updated Proposal",
         "publisher": "Updated Publisher",
-        "scientific_areas": ["Informatics"],
+        "scientific_areas": ["Informatics"]
     }
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        files=multipart_form_data(updated_data),  # Use 'files' to send multipart/form-data
+        files=updated_data,  # Use 'files' to send multipart/form-data
     )
 
     assert update_response.status_code == 200
@@ -145,10 +145,10 @@ def test_update_proposal_with_files(client):
         "name": "Original Proposal",
         "publisher": "Original Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Physics"],
+        "scientific_areas": ["Physics"]
     }
     files = {
-        "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
+        "edict_file": ("edict.pdf", b"dummy content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
@@ -163,7 +163,7 @@ def test_update_proposal_with_files(client):
     }
     files = {
         "edict_file": ("updated_edict.pdf", b"new content", "application/pdf"),
-        "document_file": ("updated_document.pdf", b"new content", "application/pdf"),
+        "document_file": ("updated_document.pdf", b"new content", "application/pdf")
     }
 
     update_response = client.put(
@@ -193,13 +193,13 @@ def test_submit_proposal(client):
         "name": "Proposal to Submit",
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Computer Science"],
+        "scientific_areas": ["Computer Science"]
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf"),
+        "file": ("document.pdf", b"document content", "application/pdf")
     }
-    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=files)
+    create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
@@ -216,13 +216,13 @@ def test_submit_proposal_missing_fields(client):
         "name": "Incomplete Proposal",
         "publisher": "Publisher 1",
         "type": "Research Scholarship",
-        "scientific_areas": ["Computer Science"],
+        "scientific_areas": ["Computer Science"]
     }
     files = {
-        "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
+        "edict_file": ("edict.pdf", b"edict content", "application/pdf")
         # Missing 'file'
     }
-    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=files)
+    create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
@@ -239,13 +239,13 @@ def test_submit_proposal_invalid_status(client):
         "name": "Proposal with Closed Status",
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Physics"],
+        "scientific_areas": ["Physics"]
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf"),
+        "file": ("document.pdf", b"document content", "application/pdf")
     }
-    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=files)
+    create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
