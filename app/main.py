@@ -272,7 +272,18 @@ def update_proposal(
     proposal.jury = jury if jury is not None else proposal.jury
     proposal.deadline = deadline if deadline is not None else proposal.deadline
     proposal.status = models.ScholarshipStatus(status) if status is not None else proposal.status
-    # proposal.scientific_areas = scientific_areas if scientific_areas is not None else proposal.scientific_areas
+
+    if scientific_areas:
+        proposal.scientific_areas.clear()
+        for area_name in scientific_areas:
+            area = db.exec(select(models.ScientificArea).where(models.ScientificArea.name == area_name)).first()
+            if not area:
+                # Create new scientific area if it doesn't exist
+                area = models.ScientificArea(name=area_name)
+                db.add(area)
+                db.commit()
+                db.refresh(area)
+            proposal.scientific_areas.append(area)
       
     # Update edict file if provided and not empty
     if edict_file:
