@@ -201,7 +201,6 @@ def create_proposal(
     # Query the database for scientific areas based on the provided names
     associated_scientific_areas = []
     for area_name in scientific_areas:
-        print(area_name)
         # Check if the scientific area already exists in the database
         statement = select(models.ScientificArea).where(models.ScientificArea.name == area_name)
         existing_area = db.exec(statement).first()
