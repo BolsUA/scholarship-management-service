@@ -127,23 +127,13 @@ def test_update_proposal(client):
         "scientific_areas": ["Informatics"],
     }
 
-    # Prepare data for multipart/form-data
-    multipart_data = []
-    for key, value in updated_data.items():
-        if isinstance(value, list):
-            for item in value:
-                multipart_data.append((key, (None, item)))
-        else:
-            multipart_data.append((key, (None, value)))
-
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        files=multipart_data,  # Use 'files' to send multipart/form-data
+        files=multipart_form_data(updated_data),  # Use 'files' to send multipart/form-data
     )
 
     assert update_response.status_code == 200
     updated_proposal = update_response.json()
-    print(updated_proposal)
     assert updated_proposal["name"] == "Updated Proposal"
     assert updated_proposal["publisher"] == "Updated Publisher"
     assert len(updated_proposal["scientific_areas"]) == 1
@@ -178,7 +168,7 @@ def test_update_proposal_with_files(client):
 
     update_response = client.put(
         f"/proposals/{proposal_id}",
-        data=updated_data,
+        data=multipart_form_data(updated_data),
         files=files,
     )
     assert update_response.status_code == 200
@@ -216,6 +206,7 @@ def test_submit_proposal(client):
 
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
+    print(create_response.details)
     assert response.status_code == 200
     data = response.json()
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
@@ -231,7 +222,7 @@ def test_submit_proposal_missing_fields(client):
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
         # Missing 'file'
     }
-    create_response = client.post("/proposals", data=form_data, files=files)
+    create_response = client.post("/proposals", data=multipart_form_data(form_data), files=files)
     assert create_response.status_code == 200
     proposal = create_response.json()
     proposal_id = proposal["id"]
@@ -272,3 +263,13 @@ def test_submit_proposal_invalid_status(client):
     data = response.json()
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
 
+def multipart_form_data(updated_data):
+    multipart_data = []
+    for key, value in updated_data.items():
+        if isinstance(value, list):
+            for item in value:
+                multipart_data.append((key, (None, item)))
+        else:
+            multipart_data.append((key, (None, value)))
+
+    return multipart_data
