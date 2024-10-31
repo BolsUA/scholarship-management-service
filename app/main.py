@@ -52,6 +52,19 @@ def create_dummy_scholarships(db: SessionDep):
         
         scientific_areas[area_name] = area
 
+    # Create or get jury members
+    juries_to_create = ["Dr. Alice", "Dr. Bob", "Dr. Carol"]
+    juries = {}
+
+    for jury_name in juries_to_create:
+        jury = db.exec(select(models.Jury).where(models.Jury.name == jury_name)).first()
+        if not jury:
+            jury = models.Jury(name=jury_name)
+            db.add(jury)
+            db.commit()
+            db.refresh(jury)
+        juries[jury_name] = jury
+
     # Define dummy scholarships
     dummy_scholarships = [
         models.Scholarship(
@@ -60,6 +73,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="University of XYZ",
             scientific_areas=[scientific_areas["Biology"]],  # Change this if you have scientific area data
             type="Research Initiation Scholarship",
+            juries=[juries["Dr. Alice"], juries["Dr. Bob"]],
             deadline=date(2024, 12, 31),
             created_at=datetime.today(),
             approved_at=None,
@@ -73,6 +87,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="Institute of ABC",
             scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
             type="Research Scholarship",
+            juries=[juries["Dr. Carol"]],
             deadline=date(2024, 11, 15),
             created_at=datetime.today(),
             approved_at=None,
@@ -86,6 +101,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="Bla bla",
             scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
             type="Research Scholarship",
+            juries=[juries["Dr. Alice"], juries["Dr. Carol"]],
             deadline=date(2024, 11, 15),
             created_at=datetime.today(),
             approved_at=None,
@@ -115,6 +131,7 @@ def get_scholarships(
     scientific_area: Optional[str] = Query(None),
     publisher: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
+    jury_name: Optional[str] = Query(None),
     deadline_after: Optional[date] = Query(None)
     ):
 
@@ -140,6 +157,13 @@ def get_scholarships(
             .where(models.ScientificArea.name == scientific_area)
         )
 
+    if jury_name:
+        # Join with the Jury model to filter by jury name
+        statement = (
+            statement.join(models.ScholarshipJuryLink)
+            .join(models.Jury)
+            .where(models.Jury.name == jury_name)
+        )
     statement = statement.offset(offset).limit(limit)
 
     results = db.exec(statement).all()
@@ -192,23 +216,21 @@ def create_proposal(
     description: Optional[str] = Form(None),
     publisher: str = Form(...),
     type: str = Form(...),
-    jury: Optional[str] = Form(None),
+    juries: Optional[List[int]] = Form(None),
     deadline: Optional[date] = Form(None),
     scientific_areas: List[str] = Form(None),
     edict_file: UploadFile = File(...),
     file: Optional[List[UploadFile]] = File(None)
 ):
+    print(scientific_areas)
     # Query the database for scientific areas based on the provided names
     associated_scientific_areas = []
-    for area_name in scientific_areas:
+    for area_name in scientific_areas or []:
         # Check if the scientific area already exists in the database
-        statement = select(models.ScientificArea).where(models.ScientificArea.name == area_name)
-        existing_area = db.exec(statement).first()
-        
-        if existing_area:
-            associated_scientific_areas.append(existing_area)
+        area = db.exec(select(models.ScientificArea).where(models.ScientificArea.name == area_name)).first()
+        if area:
+            associated_scientific_areas.append(area)
         else:
-            # If it does not exist, create a new scientific area
             new_area = models.ScientificArea(name=area_name)
             db.add(new_area)
             db.commit()
@@ -218,13 +240,20 @@ def create_proposal(
     # Create an edict record
     new_edict = create_edict_record(db, edict_file)
 
+    associated_juries = []
+    for jury_id in juries or []:
+        jury = db.get(models.Jury, jury_id)
+        if not jury:
+            raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
+        associated_juries.append(jury)
+
     # Create the proposal and associate it with the edict
     new_proposal = models.Scholarship(
         name=name,
         description=description,
         publisher=publisher,
         type=type,
-        jury=jury,
+        juries=associated_juries,
         deadline=deadline,
         status=models.ScholarshipStatus.draft,
         edict_id=new_edict.id,
@@ -249,7 +278,7 @@ def update_proposal(
     db: SessionDep,
     proposal_id: int,
     name: Optional[str] = Form(None),
-    jury: Optional[str] = Form(None),
+    juries: Optional[List[int]] = Form(None),
     status: Optional[str] = Form(None),
     deadline: Optional[str] = Form(None),
     type: Optional[str] = Form(None),
@@ -279,7 +308,6 @@ def update_proposal(
     proposal.description = description if description is not None else proposal.description
     proposal.publisher = publisher if publisher is not None else proposal.publisher
     proposal.type = type if type is not None else proposal.type
-    proposal.jury = jury if jury is not None else proposal.jury
     proposal.status = models.ScholarshipStatus(status) if status is not None else proposal.status
 
     if scientific_areas:
@@ -294,6 +322,14 @@ def update_proposal(
                 db.refresh(area)
             proposal.scientific_areas.append(area)
       
+    if juries is not None:
+        proposal.juries.clear()
+        for jury_id in juries:
+            jury = db.get(models.Jury, jury_id)
+            if not jury:
+                raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
+            proposal.juries.append(jury)
+
     # Update edict file if provided and not empty
     if edict_file:
         create_edict_record(db, edict_file)

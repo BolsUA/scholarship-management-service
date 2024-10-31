@@ -11,6 +11,15 @@ class ScholarshipStatus(str, Enum):
     jury_evaluation = "Jury Evaluation"
     closed = "Closed"
 
+class JuryBase(BaseModel):
+    name: str
+
+class JuryCreate(JuryBase):
+    pass
+
+class JuryRead(JuryBase):
+    id: int
+
 class ScientificAreaBase(BaseModel):
     name: str
 
@@ -56,11 +65,11 @@ class ScholarshipBase(BaseModel):
     description: Optional[str] = None
     publisher: str
     type: str
-    jury: Optional[str] = None
     deadline: Optional[date] = None
     status: ScholarshipStatus
 
 class ScholarshipCreate(ScholarshipBase):
+    juries: Optional[List[int]] = None
     documents: Optional[List[DocumentTemplateCreate]] = None
     edict_id: Optional[int] = None
 
@@ -72,6 +81,7 @@ class Scholarship(ScholarshipBase):
     scientific_areas: List[ScientificArea]
     edict: Optional[Edict] = None
     documents: List[DocumentTemplate] = []
+    juries: Optional[List[JuryRead]] = None
 
     class Config:
         from_attributes = True

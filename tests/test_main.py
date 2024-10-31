@@ -1,4 +1,5 @@
 # tests/test_main.py
+from ..app import models
 
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
@@ -90,6 +91,41 @@ def test_create_proposal(client):
     areas = [area["name"] for area in data["scientific_areas"]]
     assert "Computer Science" in areas
     assert "Biology" in areas
+
+def test_create_proposal_with_multiple_scientific_areas(client, db_session):
+    # Create some scientific areas in the database
+    area_names = ["Informatica", "Ciencia de dados"]
+    for area_name in area_names:
+        area = models.ScientificArea(name=area_name)
+        db_session.add(area)
+    db_session.commit()
+
+    # Prepare the form data
+    form_data = {
+        "name": "Test Proposal with Multiple Scientific Areas",
+        "publisher": "Test Publisher",
+        "type": "Research",
+        "scientific_areas": area_names
+    }
+    files = {
+        "edict_file": ("edict.pdf", b"edict content", "application/pdf")
+    }
+
+    # Send the POST request to create the proposal
+    response = client.post(
+        "/proposals",
+        data=form_data,
+        files=files,
+    )
+
+    assert response.status_code == 200
+    proposal = response.json()
+
+    # Check that the proposal has been created with the correct scientific areas
+    assert proposal["name"] == "Test Proposal with Multiple Scientific Areas"
+    assert len(proposal["scientific_areas"]) == 2
+    retrieved_area_names = [area["name"] for area in proposal["scientific_areas"]]
+    assert set(retrieved_area_names) == set(area_names)
 
 def test_create_proposal_missing_fields(client):
     form_data = {
@@ -269,14 +305,3 @@ def test_submit_proposal_invalid_status(client):
     assert response.status_code == 400
     data = response.json()
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
-
-def multipart_form_data(updated_data):
-    multipart_data = []
-    for key, value in updated_data.items():
-        if isinstance(value, list):
-            for item in value:
-                multipart_data.append((key, (None, item)))
-        else:
-            multipart_data.append((key, (None, value)))
-
-    return multipart_data
