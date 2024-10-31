@@ -61,8 +61,8 @@ class ScholarshipBase(BaseModel):
     status: ScholarshipStatus
 
 class ScholarshipCreate(ScholarshipBase):
-    documents: Optional[List[DocumentTemplateCreate]] = None  # Optional templates when creating
-    edict_id: Optional[int] = None  # Optional edict reference when creating
+    documents: Optional[List[DocumentTemplateCreate]] = None
+    edict_id: Optional[int] = None
 
 class Scholarship(ScholarshipBase):
     id: int
