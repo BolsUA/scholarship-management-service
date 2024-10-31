@@ -92,13 +92,9 @@ def test_create_proposal(client):
     assert "Computer Science" in areas
     assert "Biology" in areas
 
-def test_create_proposal_with_multiple_scientific_areas(client, db_session):
+def test_create_proposal_with_multiple_scientific_areas(client):
     # Create some scientific areas in the database
     area_names = ["Informatica", "Ciencia de dados"]
-    for area_name in area_names:
-        area = models.ScientificArea(name=area_name)
-        db_session.add(area)
-    db_session.commit()
 
     # Prepare the form data
     form_data = {
