@@ -92,7 +92,7 @@ def test_create_proposal(client):
     assert "Computer Science" in areas
     assert "Biology" in areas
 
-def test_create_proposal_with_multiple_scientific_areas(client):
+def test_create_proposal_with_multiple_scientific_areas_and_jury(client):
     # Create some scientific areas in the database
     area_names = ["Informatica", "Ciencia de dados"]
 
@@ -117,11 +117,40 @@ def test_create_proposal_with_multiple_scientific_areas(client):
     assert response.status_code == 200
     proposal = response.json()
 
+    response = client.post("/scholarships/dummy")
+    assert response.status_code == 200
+    dummy_scholarships = response.json()
+
+    jury_ids = set()
+    for scholarship in dummy_scholarships:
+        for jury in scholarship.get("juries", []):
+            jury_ids.add(jury["id"])
+
+    jury_ids = list(jury_ids)  # Convert the set to a list
+
+    # Prepare the form data for updating the proposal
+    update_form_data = {
+        "juries": jury_ids,  # List of jury IDs
+    }
+
+    proposal_id = proposal["id"]
+    update_response = client.put(
+        f"/proposals/{proposal_id}",
+        data=update_form_data,
+    )
+
+    assert update_response.status_code == 200
+    updated_proposal = update_response.json()
+
     # Check that the proposal has been created with the correct scientific areas
     assert proposal["name"] == "Test Proposal with Multiple Scientific Areas"
     assert len(proposal["scientific_areas"]) == 2
     retrieved_area_names = [area["name"] for area in proposal["scientific_areas"]]
     assert set(retrieved_area_names) == set(area_names)
+
+    assert len(updated_proposal["juries"]) == len(jury_ids)
+    updated_jury_ids = [jury["id"] for jury in updated_proposal["juries"]]
+    assert set(updated_jury_ids) == set(jury_ids)
 
 def test_create_proposal_missing_fields(client):
     form_data = {
