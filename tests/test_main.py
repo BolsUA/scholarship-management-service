@@ -1,5 +1,5 @@
 # tests/test_main.py
-from ..app import models
+from app import models
 
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
