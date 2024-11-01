@@ -447,6 +447,7 @@ def save_file(file: UploadFile, directory: str) -> str:
 
     file_path = os.path.join(directory, filename)
 
+    print(filename)
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)

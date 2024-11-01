@@ -373,7 +373,7 @@ def test_upload_document_files(client):
         'publisher': 'Test Publisher',
         'type': 'Research Scholarship',
         'document_template': 'true',
-        'document_template': 'false',
+        'document_template': 'true',
         'document_required': 'true',
         'document_required': 'false'
     }
