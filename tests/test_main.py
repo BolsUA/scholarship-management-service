@@ -332,8 +332,9 @@ def test_submit_proposal_invalid_status(client):
 
     # Attempt to submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
-    assert response.status_code == 400
     data = response.json()
+    print(data["detail"])
+    assert response.status_code == 400
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
 
 def test_upload_edict_file(client):
@@ -354,7 +355,7 @@ def test_upload_edict_file(client):
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
 
-    edict_files_dir = "app/edict_files"
+    edict_files_dir = "edict_files/"
 
     assert os.path.exists(edict_files_dir)
     with open(edict_files_dir, 'rb') as f:
@@ -389,7 +390,7 @@ def test_upload_document_files(client):
     assert response.status_code == 200, response.text
 
     # Check that the document files are saved correctly
-    application_files_dir = "application_files" 
+    application_files_dir = "application_files/" 
 
     for filename, content in [
         (document_filename1, document_content1),
@@ -413,5 +414,6 @@ def test_upload_invalid_file(client):
     }
 
     response = client.post("/proposals", data=data, files=files)
-    assert response.status_code == 400, response.detail
-    assert "Invalid filename." in response.detail
+    data = response.json()
+    assert response.status_code == 400
+    assert "Invalid filename." in response["detail"]
