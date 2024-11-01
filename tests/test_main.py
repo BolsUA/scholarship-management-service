@@ -256,7 +256,9 @@ def test_submit_proposal(client):
         "name": "Proposal to Submit",
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Computer Science"]
+        "scientific_areas": ["Computer Science"],
+        "document_template": "true",
+        "document_required": "true"
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
@@ -376,11 +378,11 @@ def test_upload_document_files(client):
         'document_required': 'false',
     }
 
-    files = [
-        ('edict_file', ('edict.txt', b"Edict content", 'text/plain')),
-        ('document_file', (document_filename1, document_content1, 'text/plain')),
-        ('document_file', (document_filename2, document_content2, 'text/plain')),
-    ]
+    files = {
+        'edict_file', ('edict.txt', b"Edict content", 'text/plain'),
+        'document_file', (document_filename1, document_content1, 'text/plain'),
+        'document_file', (document_filename2, document_content2, 'text/plain'),
+    }
 
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
@@ -399,9 +401,6 @@ def test_upload_document_files(client):
         assert file_content == content
 
 def test_upload_invalid_file(client):
-    # Attempt to upload a file without a filename
-    edict_content = b"This is a test edict file."
-
     data = {
         'name': 'Invalid File Test',
         'publisher': 'Test Publisher',
@@ -409,9 +408,9 @@ def test_upload_invalid_file(client):
     }
 
     files = {
-        'edict_file': ('', edict_content, 'text/plain'),  # Empty filename
+        'edict_file': ('../file.txt', b"This is a test edict file.", 'text/plain'),
     }
 
     response = client.post("/proposals", data=data, files=files)
-    assert response.status_code == 400, response.text
-    assert "File must have a valid filename" in response.text
+    assert response.status_code == 400, response.detail
+    assert "Invalid filename." in response.detail
