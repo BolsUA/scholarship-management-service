@@ -395,6 +395,7 @@ def test_upload_document_files(client):
         document_file_dir = os.getenv("APPLICATION_FILES_DIR", "/application_files")
         document_file_path = os.path.join(document_file_dir, filename)
         print(document_file_path)
+        print(os.getcwd())
         assert os.path.exists(document_file_path)
         with open(document_file_path, 'rb') as f:
             file_content = f.read()
