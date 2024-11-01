@@ -391,8 +391,7 @@ def test_upload_document_files(client):
         (document_filename1, document_content1),
         (document_filename2, document_content2),
     ]:
-        document_file_dir = os.getenv("APPLICATION_FILES_DIR", "application_files/")
-        document_file_path = os.path.join(os.getcwd(), document_file_dir, filename)
+        document_file_path = os.path.join(os.getcwd(), "application_files/", filename)
 
         for root, dirs, files in os.walk(os.getcwd()):
             # Exclude hidden directories and files if necessary
