@@ -25,8 +25,8 @@ os.makedirs(EDICT_FILES_DIR, exist_ok=True)
 
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan)
 
-app.mount("/edict_files", StaticFiles(directory="edict_files"), name="edict_files")
-app.mount("/application_files", StaticFiles(directory="application_files"), name="application_files")
+app.mount("/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_files")
+app.mount("/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
 
 origins = ["*"]
 
