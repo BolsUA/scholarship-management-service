@@ -277,8 +277,9 @@ def test_submit_proposal(client):
 
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
-    assert response.status_code == 200
     data = response.json()
+    print(data.detail)
+    assert response.status_code == 200
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
 
 def test_submit_proposal_missing_fields(client):
@@ -353,7 +354,7 @@ def test_upload_edict_file(client):
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
 
-    edict_files_dir = "edict_files"
+    edict_files_dir = "app/edict_files"
 
     assert os.path.exists(edict_files_dir)
     with open(edict_files_dir, 'rb') as f:
@@ -379,9 +380,9 @@ def test_upload_document_files(client):
     }
 
     files = {
-        'edict_file', ('edict.txt', b"Edict content", 'text/plain'),
-        'document_file', (document_filename1, document_content1, 'text/plain'),
-        'document_file', (document_filename2, document_content2, 'text/plain'),
+        'edict_file': ('edict.txt', b"Edict content", 'text/plain'),
+        'document_file': (document_filename1, document_content1, 'text/plain'),
+        'document_file': (document_filename2, document_content2, 'text/plain'),
     }
 
     response = client.post("/proposals", data=data, files=files)
