@@ -25,7 +25,7 @@ class Jury(SQLModel, table=True):
     # Add additional fields if necessary (e.g., email, affiliation)
 
     scholarships: List["Scholarship"] = Relationship(
-        back_populates="juries", link_model=ScholarshipJuryLink
+        back_populates="jury", link_model=ScholarshipJuryLink
     )
 
 class ScholarshipScientificAreaLink(SQLModel, table=True):
@@ -52,7 +52,7 @@ class Scholarship(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     publisher: str = Field(nullable=False)
     type: str = Field(nullable=False)
-    juries: List[Jury] = Relationship(
+    jury: List[Jury] = Relationship(
         back_populates="scholarships", link_model=ScholarshipJuryLink
     )
     deadline: Optional[date] = Field(default=None)

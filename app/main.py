@@ -53,17 +53,17 @@ def create_dummy_scholarships(db: SessionDep):
         scientific_areas[area_name] = area
 
     # Create or get jury members
-    juries_to_create = ["Dr. Alice", "Dr. Bob", "Dr. Carol"]
-    juries = {}
+    jury_to_create = ["Dr. Alice", "Dr. Bob", "Dr. Carol"]
+    jury = {}
 
-    for jury_name in juries_to_create:
+    for jury_name in jury_to_create:
         jury = db.exec(select(models.Jury).where(models.Jury.name == jury_name)).first()
         if not jury:
             jury = models.Jury(name=jury_name)
             db.add(jury)
             db.commit()
             db.refresh(jury)
-        juries[jury_name] = jury
+        jury[jury_name] = jury
 
     # Define dummy scholarships
     dummy_scholarships = [
@@ -73,7 +73,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="University of XYZ",
             scientific_areas=[scientific_areas["Biology"]],  # Change this if you have scientific area data
             type="Research Initiation Scholarship",
-            juries=[juries["Dr. Alice"], juries["Dr. Bob"]],
+            jury=[jury["Dr. Alice"], jury["Dr. Bob"]],
             deadline=date(2024, 12, 31),
             created_at=datetime.today(),
             approved_at=None,
@@ -87,7 +87,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="Institute of ABC",
             scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
             type="Research Scholarship",
-            juries=[juries["Dr. Carol"]],
+            jury=[jury["Dr. Carol"]],
             deadline=date(2024, 11, 15),
             created_at=datetime.today(),
             approved_at=None,
@@ -101,7 +101,7 @@ def create_dummy_scholarships(db: SessionDep):
             publisher="Bla bla",
             scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
             type="Research Scholarship",
-            juries=[juries["Dr. Alice"], juries["Dr. Carol"]],
+            jury=[jury["Dr. Alice"], jury["Dr. Carol"]],
             deadline=date(2024, 11, 15),
             created_at=datetime.today(),
             approved_at=None,
@@ -216,7 +216,7 @@ def create_proposal(
     description: Optional[str] = Form(None),
     publisher: str = Form(...),
     type: str = Form(...),
-    juries: Optional[List[int]] = Form(None),
+    jury: Optional[List[int]] = Form(None),
     deadline: Optional[date] = Form(None),
     scientific_areas: List[str] = Form(None),
     edict_file: UploadFile = File(...),
@@ -240,12 +240,12 @@ def create_proposal(
     # Create an edict record
     new_edict = create_edict_record(db, edict_file)
 
-    associated_juries = []
-    for jury_id in juries or []:
+    associated_jury = []
+    for jury_id in jury or []:
         jury = db.get(models.Jury, jury_id)
         if not jury:
             raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
-        associated_juries.append(jury)
+        associated_jury.append(jury)
 
     # Create the proposal and associate it with the edict
     new_proposal = models.Scholarship(
@@ -253,7 +253,7 @@ def create_proposal(
         description=description,
         publisher=publisher,
         type=type,
-        juries=associated_juries,
+        jury=associated_jury,
         deadline=deadline,
         status=models.ScholarshipStatus.draft,
         edict_id=new_edict.id,
@@ -278,7 +278,7 @@ def update_proposal(
     db: SessionDep,
     proposal_id: int,
     name: Optional[str] = Form(None),
-    juries: Optional[List[int]] = Form(None),
+    jury: Optional[List[int]] = Form(None),
     status: Optional[str] = Form(None),
     deadline: Optional[str] = Form(None),
     type: Optional[str] = Form(None),
@@ -322,13 +322,13 @@ def update_proposal(
                 db.refresh(area)
             proposal.scientific_areas.append(area)
       
-    if juries is not None:
-        proposal.juries.clear()
-        for jury_id in juries:
+    if jury is not None:
+        proposal.jury.clear()
+        for jury_id in jury:
             jury = db.get(models.Jury, jury_id)
             if not jury:
                 raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
-            proposal.juries.append(jury)
+            proposal.jury.append(jury)
 
     # Update edict file if provided and not empty
     if edict_file:

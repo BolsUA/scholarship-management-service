@@ -69,7 +69,7 @@ class ScholarshipBase(BaseModel):
     status: ScholarshipStatus
 
 class ScholarshipCreate(ScholarshipBase):
-    juries: Optional[List[int]] = None
+    jury: Optional[List[int]] = None
     documents: Optional[List[DocumentTemplateCreate]] = None
     edict_id: Optional[int] = None
 
@@ -81,7 +81,7 @@ class Scholarship(ScholarshipBase):
     scientific_areas: List[ScientificArea]
     edict: Optional[Edict] = None
     documents: List[DocumentTemplate] = []
-    juries: Optional[List[JuryRead]] = None
+    jury: Optional[List[JuryRead]] = None
 
     class Config:
         from_attributes = True

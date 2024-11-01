@@ -123,14 +123,14 @@ def test_create_proposal_with_multiple_scientific_areas_and_jury(client):
 
     jury_ids = set()
     for scholarship in dummy_scholarships:
-        for jury in scholarship.get("juries", []):
+        for jury in scholarship.get("jury", []):
             jury_ids.add(jury["id"])
 
     jury_ids = list(jury_ids)  # Convert the set to a list
 
     # Prepare the form data for updating the proposal
     update_form_data = {
-        "juries": jury_ids,  # List of jury IDs
+        "jury": jury_ids,  # List of jury IDs
     }
 
     proposal_id = proposal["id"]
@@ -148,8 +148,8 @@ def test_create_proposal_with_multiple_scientific_areas_and_jury(client):
     retrieved_area_names = [area["name"] for area in proposal["scientific_areas"]]
     assert set(retrieved_area_names) == set(area_names)
 
-    assert len(updated_proposal["juries"]) == len(jury_ids)
-    updated_jury_ids = [jury["id"] for jury in updated_proposal["juries"]]
+    assert len(updated_proposal["jury"]) == len(jury_ids)
+    updated_jury_ids = [jury["id"] for jury in updated_proposal["jury"]]
     assert set(updated_jury_ids) == set(jury_ids)
 
 def test_create_proposal_missing_fields(client):
