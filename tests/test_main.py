@@ -76,6 +76,8 @@ def test_create_proposal(client):
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
         "scientific_areas": ["Computer Science", "Biology"],
+        "document_template": "true",
+        "document_required": "true"
     }
     files = {
         "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),

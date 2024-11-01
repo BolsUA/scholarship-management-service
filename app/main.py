@@ -290,7 +290,7 @@ def create_proposal(
         raise HTTPException(status_code=500, detail="Failed to retrieve proposal ID.")
 
     # Update document file(s) if provided and not empty
-    for idx, file in enumerate(document_file):
+    for idx, file in enumerate(document_file or []):
         required_flag = document_required[idx] if document_required else False  # Default to False if not provided
         template_flag = document_template[idx] if document_template else False  # Default to False if not provided
         create_document(db, new_proposal.id, file, required_flag, template_flag)
@@ -374,7 +374,7 @@ def update_proposal(
         create_edict_record(db, edict_file)
 
     # Update document file(s) if provided and not empty
-    for idx, file in enumerate(document_file):
+    for idx, file in enumerate(document_file or []):
         required_flag = document_required[idx] if document_required else False  # Default to False if not provided
         template_flag = document_template[idx] if document_template else False  # Default to False if not provided
         create_document(db, proposal.id, file, required_flag, template_flag)
