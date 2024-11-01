@@ -262,7 +262,7 @@ def test_submit_proposal(client):
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf")
+        "document_file": ("document.pdf", b"document content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
@@ -316,7 +316,7 @@ def test_submit_proposal_invalid_status(client):
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf")
+        "document_file": ("document.pdf", b"document content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200

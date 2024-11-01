@@ -1,5 +1,6 @@
 # tests/conftest.py
-
+import os
+import tempfile
 import pytest
 from sqlmodel import SQLModel, Session
 from fastapi.testclient import TestClient
@@ -21,6 +22,27 @@ def session_fixture(engine):
 
     session.rollback()
 
+@pytest.fixture(name="temp_dirs", scope="function")
+def temp_dirs_fixture():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        application_files_dir = os.path.join(temp_dir, "application_files")
+        edict_files_dir = os.path.join(temp_dir, "edict_files")
+        os.makedirs(application_files_dir, exist_ok=True)
+        os.makedirs(edict_files_dir, exist_ok=True)
+        
+        # Set the directories in environment variables
+        os.environ["APPLICATION_FILES_DIR"] = application_files_dir
+        os.environ["EDICT_FILES_DIR"] = edict_files_dir
+        
+        yield {
+            "application_files_dir": application_files_dir,
+            "edict_files_dir": edict_files_dir,
+        }
+        
+        # Clean up: remove environment variables
+        del os.environ["APPLICATION_FILES_DIR"]
+        del os.environ["EDICT_FILES_DIR"]
+
 # Create a TestClient that uses the test session
 @pytest.fixture(name="client", scope="function")
 def client_fixture(session):
@@ -28,7 +50,11 @@ def client_fixture(session):
     def get_session_override():
         yield session
 
-    app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
+    from importlib import reload
+    import app.main
+    reload(app.main)
+
+    app.main.app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app.main.app) as client:
         yield client
-    app.dependency_overrides.clear()
+    app.main.app.dependency_overrides.clear()

@@ -17,7 +17,16 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     yield
 
+APPLICATION_FILES_DIR = os.getenv("APPLICATION_FILES_DIR", "application_files")
+EDICT_FILES_DIR = os.getenv("EDICT_FILES_DIR", "edict_files")
+
+os.makedirs(APPLICATION_FILES_DIR, exist_ok=True)
+os.makedirs(EDICT_FILES_DIR, exist_ok=True)
+
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan)
+
+app.mount("/edict_files", StaticFiles(directory="edict_files"), name="edict_files")
+app.mount("/application_files", StaticFiles(directory="application_files"), name="application_files")
 
 origins = ["*"]
 
@@ -35,11 +44,6 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
-
-os.makedirs("application_files", exist_ok=True)
-os.makedirs("edict_files", exist_ok=True)
-app.mount("/application_files", StaticFiles(directory="application_files"), name="application_files")
-app.mount("/edict_files", StaticFiles(directory="edict_files"), name="edict_files")
 
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
 def create_dummy_scholarships(db: SessionDep):
