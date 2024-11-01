@@ -354,8 +354,8 @@ def test_upload_edict_file(client):
     assert response.status_code == 200, response.text
 
     edict_files_dir = os.getenv("EDICT_FILES_DIR", "/edict_files")
-    edict_file_path = os.path.join(edict_files_dir, edict_filename)
-    print(edict_file_path)
+    edict_file_path = os.path.abspath(os.path.join(edict_files_dir, edict_filename))
+
     assert os.path.exists(edict_file_path)
     with open(edict_file_path, 'rb') as f:
         content = f.read()
@@ -393,7 +393,7 @@ def test_upload_document_files(client):
         (document_filename2, document_content2),
     ]:
         document_file_dir = os.getenv("APPLICATION_FILES_DIR", "/application_files")
-        document_file_path = os.path.join(document_file_dir, filename)
+        document_file_path = os.path.join(os.getcwd(), document_file_dir, filename)
         print(document_file_path)
         print(os.getcwd())
         assert os.path.exists(document_file_path)
