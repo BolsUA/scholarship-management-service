@@ -343,15 +343,15 @@ def test_upload_edict_file(client):
     data = {
         'name': 'Test Scholarship',
         'publisher': 'Test Publisher',
-        'type': 'Research Scholarship',
+        'type': 'Research Scholarship'
     }
 
     files = {
-        'edict_file': (edict_filename, edict_content, 'text/plain'),
+        'edict_file': (edict_filename, edict_content, 'text/plain')
     }
 
     response = client.post("/proposals", data=data, files=files)
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200
 
     edict_file_path = os.path.join(os.getcwd(), "edict_files/", edict_filename)
 
@@ -375,13 +375,13 @@ def test_upload_document_files(client):
         'document_template': 'true',
         'document_template': 'false',
         'document_required': 'true',
-        'document_required': 'false',
+        'document_required': 'false'
     }
 
     files = {
         'edict_file': ('edict.txt', b"Edict content", 'text/plain'),
         'document_file': (document_filename1, document_content1, 'text/plain'),
-        'document_file': (document_filename2, document_content2, 'text/plain'),
+        'document_file': (document_filename2, document_content2, 'text/plain')
     }
 
     response = client.post("/proposals", data=data, files=files)
@@ -393,23 +393,6 @@ def test_upload_document_files(client):
     ]:
         document_file_path = os.path.join(os.getcwd(), "application_files/", filename)
 
-        for root, dirs, files in os.walk(os.getcwd()):
-            # Exclude hidden directories and files if necessary
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
-            files = [f for f in files if not f.startswith('.')]
-            
-            # Calculate the level of indentation
-            level = root.replace(os.getcwd(), '').count(os.sep)
-            indent = ' ' * 4 * level
-            # Print the directory name
-            print(f"{indent}{os.path.basename(root)}/")
-            # Print the file names
-            for f in files:
-                subindent = ' ' * 4 * (level + 1)
-                print(f"{subindent}{f}")
-
-        print(document_file_path)
-        print(os.getcwd())
         assert os.path.exists(document_file_path)
         with open(document_file_path, 'rb') as f:
             file_content = f.read()
