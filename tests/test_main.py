@@ -354,10 +354,11 @@ def test_upload_edict_file(client):
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
 
-    edict_files_dir = "/edict_files"
+    edict_files_dir = os.environ["EDICT_FILES_DIR"]
+    edict_file_path = os.path.join(edict_files_dir, edict_filename)
 
-    assert os.path.exists(edict_files_dir)
-    with open(edict_files_dir, 'rb') as f:
+    assert os.path.exists(edict_file_path)
+    with open(edict_file_path, 'rb') as f:
         content = f.read()
     assert content == edict_content
 
@@ -388,14 +389,13 @@ def test_upload_document_files(client):
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
 
-    # Check that the document files are saved correctly
-    application_files_dir = "/application_files" 
-
     for filename, content in [
         (document_filename1, document_content1),
         (document_filename2, document_content2),
     ]:
-        document_file_path = os.path.join(application_files_dir, filename)
+        document_files_dir = os.environ["APPLICATION_FILES_DIR"]
+        document_file_path = os.path.join(document_files_dir, filename)
+
         assert os.path.exists(document_file_path)
         with open(document_file_path, 'rb') as f:
             file_content = f.read()
