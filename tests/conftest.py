@@ -33,6 +33,8 @@ def temp_dirs_fixture():
         # Set the directories in environment variables
         os.environ["APPLICATION_FILES_DIR"] = application_files_dir
         os.environ["EDICT_FILES_DIR"] = edict_files_dir
+        print(application_files_dir)
+        print(edict_files_dir)
         
         yield {
             "application_files_dir": application_files_dir,
