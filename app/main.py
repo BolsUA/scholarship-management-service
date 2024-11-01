@@ -57,13 +57,13 @@ def create_dummy_scholarships(db: SessionDep):
     jury = {}
 
     for jury_name in jury_to_create:
-        jury = db.exec(select(models.Jury).where(models.Jury.name == jury_name)).first()
-        if not jury:
-            jury = models.Jury(name=jury_name)
-            db.add(jury)
+        juror = db.exec(select(models.Jury).where(models.Jury.name == jury_name)).first()
+        if not juror:
+            juror = models.Jury(name=jury_name)
+            db.add(juror)
             db.commit()
-            db.refresh(jury)
-        jury[jury_name] = jury
+            db.refresh(juror)
+        jury[jury_name] = juror
 
     # Define dummy scholarships
     dummy_scholarships = [
