@@ -34,7 +34,7 @@ def test_get_scholarships_with_status_filter(client):
     assert data[0]["status"] == "Open"
 
 def test_get_scholarships_with_scientific_area_filter(client):
-    response = client.get("/scholarships", params={"scientific_area": "Biology"})
+    response = client.get("/scholarships", params={"scientific_areas": "Biology"})
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
