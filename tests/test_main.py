@@ -1,5 +1,5 @@
 # tests/test_main.py
-from app import models
+import os
 
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
@@ -330,3 +330,86 @@ def test_submit_proposal_invalid_status(client):
     assert response.status_code == 400
     data = response.json()
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
+
+def test_upload_edict_file(client):
+    # Create a test edict file
+    edict_content = b"This is a test edict file."
+    edict_filename = "test_edict.txt"
+
+    data = {
+        'name': 'Test Scholarship',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+    }
+
+    files = {
+        'edict_file': (edict_filename, edict_content, 'text/plain'),
+    }
+
+    response = client.post("/proposals", data=data, files=files)
+    assert response.status_code == 200, response.text
+
+    edict_files_dir = "edict_files"
+
+    assert os.path.exists(edict_files_dir)
+    with open(edict_files_dir, 'rb') as f:
+        content = f.read()
+    assert content == edict_content
+
+def test_upload_document_files(client):
+    # Create test document files
+    document_content1 = b"This is the first test document file."
+    document_filename1 = "test_document1.txt"
+
+    document_content2 = b"This is the second test document file."
+    document_filename2 = "test_document2.txt"
+
+    data = {
+        'name': 'Test Scholarship with Documents',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+        'document_template': 'true',
+        'document_template': 'false',
+        'document_required': 'true',
+        'document_required': 'false',
+    }
+
+    files = [
+        ('edict_file', ('edict.txt', b"Edict content", 'text/plain')),
+        ('document_file', (document_filename1, document_content1, 'text/plain')),
+        ('document_file', (document_filename2, document_content2, 'text/plain')),
+    ]
+
+    response = client.post("/proposals", data=data, files=files)
+    assert response.status_code == 200, response.text
+
+    # Check that the document files are saved correctly
+    application_files_dir = "application_files" 
+
+    for filename, content in [
+        (document_filename1, document_content1),
+        (document_filename2, document_content2),
+    ]:
+        document_file_path = os.path.join(application_files_dir, filename)
+        assert os.path.exists(document_file_path)
+        with open(document_file_path, 'rb') as f:
+            file_content = f.read()
+        assert file_content == content
+
+def test_upload_invalid_file(client):
+    # Attempt to upload a file without a filename
+    edict_content = b"This is a test edict file."
+
+    data = {
+        'name': 'Invalid File Test',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+    }
+
+    files = {
+        'edict_file': ('', edict_content, 'text/plain'),  # Empty filename
+    }
+
+    response = client.post("/proposals", data=data, files=files)
+    assert response.status_code == 400, response.text
+    assert "File must have a valid filename" in response.text
