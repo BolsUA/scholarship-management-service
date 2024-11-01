@@ -47,7 +47,7 @@ def test_get_scholarships_filters(client):
     data = response.json()
     assert "types" in data
     assert "scientific_areas" in data
-    assert "statuses" in data
+    assert "status" in data
     assert "publishers" in data
     assert "deadlines" in data
 

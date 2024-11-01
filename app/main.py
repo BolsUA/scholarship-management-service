@@ -127,12 +127,13 @@ def get_scholarships(
     page: int = 1, 
     limit: int = 10,
     name: Optional[str] = Query(None),
-    status: Optional[models.ScholarshipStatus] = Query(None),
-    scientific_area: Optional[str] = Query(None),
+    status: Optional[List[models.ScholarshipStatus]] = Query(None),
+    scientific_areas: Optional[List[str]] = Query(None),
     publisher: Optional[str] = Query(None),
-    type: Optional[str] = Query(None),
+    types: Optional[List[str]] = Query(None),
     jury_name: Optional[str] = Query(None),
-    deadline_after: Optional[date] = Query(None)
+    deadline_start: Optional[date] = Query(None),
+    deadline_end: Optional[date] = Query(None)
     ):
 
     offset = (page - 1) * limit
@@ -140,21 +141,23 @@ def get_scholarships(
     statement = select(models.Scholarship)
 
     if name:
-        statement = statement.where(models.Scholarship.name == name)
+        statement = statement.where(models.Scholarship.name.ilike(f"%{name}%"))
     if status:
-        statement = statement.where(models.Scholarship.status == status)
+        statement = statement.where(models.Scholarship.status.in_(status))
     if publisher:
         statement = statement.where(models.Scholarship.publisher == publisher)
-    if type:
-        statement = statement.where(models.Scholarship.type == type)
-    if deadline_after:
-        statement = statement.where(models.Scholarship.deadline >= deadline_after)
-    if scientific_area:
-        # Join with the scientific area model to filter by area name
+    if types:
+        statement = statement.where(models.Scholarship.type.in_(types))
+    if deadline_start:
+        statement = statement.where(models.Scholarship.deadline >= deadline_start)
+    if deadline_end:
+        statement = statement.where(models.Scholarship.deadline <= deadline_end)
+    if scientific_areas:
+        # Join with the scientific area model to filter by multiple area names
         statement = (
             statement.join(models.ScholarshipScientificAreaLink)
             .join(models.ScientificArea)
-            .where(models.ScientificArea.name == scientific_area)
+            .where(models.ScientificArea.name.in_(scientific_areas))
         )
 
     if jury_name:
@@ -181,7 +184,7 @@ def get_filter_options(db: SessionDep):
     scientific_areas = [sa for sa in scientific_areas if sa]
 
     # Get all possible statuses from the ScholarshipStatus enum
-    statuses = [schemas.ScholarshipStatus(status.value) for status in models.ScholarshipStatus]
+    status = [schemas.ScholarshipStatus(status.value) for status in models.ScholarshipStatus]
 
     # Retrieve distinct publishers
     publishers = db.exec(select(models.Scholarship.publisher).distinct()).all()
@@ -194,7 +197,7 @@ def get_filter_options(db: SessionDep):
     return schemas.FilterOptionsResponse(
         types=types,
         scientific_areas=scientific_areas,
-        statuses=statuses,
+        status=status,
         publishers=publishers,
         deadlines=deadlines,
     )

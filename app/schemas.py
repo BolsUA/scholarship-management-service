@@ -89,6 +89,6 @@ class Scholarship(ScholarshipBase):
 class FilterOptionsResponse(BaseModel):
     types: List[str]
     scientific_areas: List[str]
-    statuses: List[ScholarshipStatus]
+    status: List[ScholarshipStatus]
     publishers: List[str]
     deadlines: List[date]
