@@ -356,6 +356,21 @@ def test_upload_edict_file(client):
     edict_files_dir = os.getenv("EDICT_FILES_DIR", "/edict_files")
     edict_file_path = os.path.abspath(os.path.join(edict_files_dir, edict_filename))
 
+    for root, dirs, files in os.walk(os.getcwd()):
+        # Exclude hidden directories and files if necessary
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        files = [f for f in files if not f.startswith('.')]
+        
+        # Calculate the level of indentation
+        level = root.replace(os.getcwd(), '').count(os.sep)
+        indent = ' ' * 4 * level
+        # Print the directory name
+        print(f"{indent}{os.path.basename(root)}/")
+        # Print the file names
+        for f in files:
+            subindent = ' ' * 4 * (level + 1)
+            print(f"{subindent}{f}")
+
     assert os.path.exists(edict_file_path)
     with open(edict_file_path, 'rb') as f:
         content = f.read()
