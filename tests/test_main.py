@@ -1,4 +1,5 @@
 # tests/test_main.py
+from app import models
 
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
@@ -33,7 +34,7 @@ def test_get_scholarships_with_status_filter(client):
     assert data[0]["status"] == "Open"
 
 def test_get_scholarships_with_scientific_area_filter(client):
-    response = client.get("/scholarships", params={"scientific_area": "Biology"})
+    response = client.get("/scholarships", params={"scientific_areas": "Biology"})
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -46,7 +47,7 @@ def test_get_scholarships_filters(client):
     data = response.json()
     assert "types" in data
     assert "scientific_areas" in data
-    assert "statuses" in data
+    assert "status" in data
     assert "publishers" in data
     assert "deadlines" in data
 
@@ -90,6 +91,66 @@ def test_create_proposal(client):
     areas = [area["name"] for area in data["scientific_areas"]]
     assert "Computer Science" in areas
     assert "Biology" in areas
+
+def test_create_proposal_with_multiple_scientific_areas_and_jury(client):
+    # Create some scientific areas in the database
+    area_names = ["Informatica", "Ciencia de dados"]
+
+    # Prepare the form data
+    form_data = {
+        "name": "Test Proposal with Multiple Scientific Areas",
+        "publisher": "Test Publisher",
+        "type": "Research",
+        "scientific_areas": area_names
+    }
+    files = {
+        "edict_file": ("edict.pdf", b"edict content", "application/pdf")
+    }
+
+    # Send the POST request to create the proposal
+    response = client.post(
+        "/proposals",
+        data=form_data,
+        files=files,
+    )
+
+    assert response.status_code == 200
+    proposal = response.json()
+
+    response = client.post("/scholarships/dummy")
+    assert response.status_code == 200
+    dummy_scholarships = response.json()
+
+    jury_ids = set()
+    for scholarship in dummy_scholarships:
+        for jury in scholarship.get("jury", []):
+            jury_ids.add(jury["id"])
+
+    jury_ids = list(jury_ids)  # Convert the set to a list
+
+    # Prepare the form data for updating the proposal
+    update_form_data = {
+        "jury": jury_ids,  # List of jury IDs
+    }
+
+    proposal_id = proposal["id"]
+    update_response = client.put(
+        f"/proposals/{proposal_id}",
+        data=update_form_data,
+    )
+
+    assert update_response.status_code == 200
+    updated_proposal = update_response.json()
+
+    # Check that the proposal has been created with the correct scientific areas
+    assert proposal["name"] == "Test Proposal with Multiple Scientific Areas"
+    assert len(proposal["scientific_areas"]) == 2
+    retrieved_area_names = [area["name"] for area in proposal["scientific_areas"]]
+    assert set(retrieved_area_names) == set(area_names)
+
+    assert len(updated_proposal["jury"]) == len(jury_ids)
+    updated_jury_ids = [jury["id"] for jury in updated_proposal["jury"]]
+    assert set(updated_jury_ids) == set(jury_ids)
 
 def test_create_proposal_missing_fields(client):
     form_data = {
@@ -269,14 +330,3 @@ def test_submit_proposal_invalid_status(client):
     assert response.status_code == 400
     data = response.json()
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
-
-def multipart_form_data(updated_data):
-    multipart_data = []
-    for key, value in updated_data.items():
-        if isinstance(value, list):
-            for item in value:
-                multipart_data.append((key, (None, item)))
-        else:
-            multipart_data.append((key, (None, value)))
-
-    return multipart_data

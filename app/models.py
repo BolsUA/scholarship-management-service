@@ -11,6 +11,23 @@ class ScholarshipStatus(enum.Enum):
     jury_evaluation = "Jury Evaluation"
     closed = "Closed"
 
+class ScholarshipJuryLink(SQLModel, table=True):
+    scholarship_id: Optional[int] = Field(
+        default=None, foreign_key="scholarship.id", primary_key=True
+    )
+    jury_id: Optional[int] = Field(
+        default=None, foreign_key="jury.id", primary_key=True
+    )
+
+class Jury(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(nullable=False)
+    # Add additional fields if necessary (e.g., email, affiliation)
+
+    scholarships: List["Scholarship"] = Relationship(
+        back_populates="jury", link_model=ScholarshipJuryLink
+    )
+
 class ScholarshipScientificAreaLink(SQLModel, table=True):
     scholarship_id: Optional[int] = Field(default=None, foreign_key="scholarship.id", primary_key=True)
     scientific_area_id: Optional[int] = Field(default=None, foreign_key="scientificarea.id", primary_key=True)
@@ -35,7 +52,9 @@ class Scholarship(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     publisher: str = Field(nullable=False)
     type: str = Field(nullable=False)
-    jury: Optional[str] = Field(default=None)
+    jury: List[Jury] = Relationship(
+        back_populates="scholarships", link_model=ScholarshipJuryLink
+    )
     deadline: Optional[date] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     approved_at: Optional[datetime] = Field(default=None)
