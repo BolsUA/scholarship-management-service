@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from sqlmodel import SQLModel, Session
 from fastapi.testclient import TestClient
-from app.main import app, get_session
+from app.main import get_session
 from app.database import engine
 
 # Create a test database in memory
@@ -39,9 +39,9 @@ def temp_dirs_fixture():
             "edict_files_dir": edict_files_dir,
         }
         
-        # Clean up: remove environment variables
-        del os.environ["APPLICATION_FILES_DIR"]
-        del os.environ["EDICT_FILES_DIR"]
+        # # Clean up: remove environment variables
+        # del os.environ["APPLICATION_FILES_DIR"]
+        # del os.environ["EDICT_FILES_DIR"]
 
 # Create a TestClient that uses the test session
 @pytest.fixture(name="client", scope="function")
