@@ -353,8 +353,8 @@ def test_upload_edict_file(client):
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
 
-    edict_files_dir = os.getenv("EDICT_FILES_DIR", "/edict_files")
-    edict_file_path = os.path.abspath(os.path.join(edict_files_dir, edict_filename))
+    edict_files_dir = os.getenv("EDICT_FILES_DIR", "edict_files/")
+    edict_file_path = os.path.join(os.getcwd(), edict_files_dir, edict_filename)
 
     for root, dirs, files in os.walk(os.getcwd()):
         # Exclude hidden directories and files if necessary
@@ -407,7 +407,7 @@ def test_upload_document_files(client):
         (document_filename1, document_content1),
         (document_filename2, document_content2),
     ]:
-        document_file_dir = os.getenv("APPLICATION_FILES_DIR", "/application_files")
+        document_file_dir = os.getenv("APPLICATION_FILES_DIR", "application_files/")
         document_file_path = os.path.join(os.getcwd(), document_file_dir, filename)
         print(document_file_path)
         print(os.getcwd())
