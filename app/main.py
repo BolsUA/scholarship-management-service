@@ -254,10 +254,12 @@ def create_proposal(
 
     if document_file:
         num_files = len(document_file)
-        
+        print(num_files) 
         # Provide default values if flags are None
         document_template = document_template or [False] * num_files
         document_required = document_required or [False] * num_files
+        print(document_file) 
+        print(document_required) 
 
         if document_template and len(document_template) != num_files:
             raise HTTPException(status_code=400, detail="Number of 'template' flags must match number of documents.")
