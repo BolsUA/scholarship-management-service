@@ -383,9 +383,9 @@ def test_upload_document_files(client):
 
     # Use a list of tuples for files
     files = {
-        'edict_file', ('edict.txt', b"Edict content", 'text/plain'),
-        'document_file', (document_filename1, document_content1, 'text/plain'),
-        'document_file', (document_filename2, document_content2, 'text/plain')
+        'edict_file': ('edict.txt', b"Edict content", 'text/plain'),
+        'document_file': (document_filename1, document_content1, 'text/plain'),
+        'document_file': (document_filename2, document_content2, 'text/plain')
     }
 
     response = client.post("/proposals", data=data, files=files)
