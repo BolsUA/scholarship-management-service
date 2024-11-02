@@ -10,6 +10,7 @@ from . import models, schemas
 from datetime import date, datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from apscheduler.schedulers.background import BackgroundScheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,6 +45,26 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
+# Scheduler for deadline detection mecanism
+scheduler = BackgroundScheduler()
+
+def update_scholarship_status():
+    with Session(engine) as session:
+        today = datetime.today().date()
+        scholarships = session.exec(select(models.Scholarship).where(
+            models.Scholarship.status == models.ScholarshipStatus.open, 
+            models.Scholarship.deadline < today
+        )).all()
+        
+        for scholarship in scholarships:
+            scholarship.status = models.ScholarshipStatus.jury_evaluation
+            session.add(scholarship)
+        
+        session.commit()
+
+scheduler.add_job(update_scholarship_status, "interval", seconds=60) # updates every minute
+scheduler.start()
 
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
 def create_dummy_scholarships(db: SessionDep):
