@@ -1,5 +1,7 @@
 # tests/test_main.py
-from app import models
+import os
+
+from starlette.datastructures import MultiDict
 
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
@@ -76,6 +78,8 @@ def test_create_proposal(client):
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
         "scientific_areas": ["Computer Science", "Biology"],
+        "document_template": "true",
+        "document_required": "true"
     }
     files = {
         "edict_file": ("edict.pdf", b"dummy content", "application/pdf"),
@@ -254,11 +258,13 @@ def test_submit_proposal(client):
         "name": "Proposal to Submit",
         "publisher": "Test Publisher",
         "type": "Research Scholarship",
-        "scientific_areas": ["Computer Science"]
+        "scientific_areas": ["Computer Science"],
+        "document_template": "true",
+        "document_required": "true"
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf")
+        "document_file": ("document.pdf", b"document content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
@@ -273,8 +279,8 @@ def test_submit_proposal(client):
 
     # Submit the proposal
     response = client.post(f"/proposals/{proposal_id}/submit")
-    assert response.status_code == 200
     data = response.json()
+    assert response.status_code == 200
     assert data["message"] == "Proposal submitted successfully. It will be reviewed shortly."
 
 def test_submit_proposal_missing_fields(client):
@@ -311,7 +317,7 @@ def test_submit_proposal_invalid_status(client):
     }
     files = {
         "edict_file": ("edict.pdf", b"edict content", "application/pdf"),
-        "file": ("document.pdf", b"document content", "application/pdf")
+        "document_file": ("document.pdf", b"document content", "application/pdf")
     }
     create_response = client.post("/proposals", data=form_data, files=files)
     assert create_response.status_code == 200
@@ -330,3 +336,82 @@ def test_submit_proposal_invalid_status(client):
     assert response.status_code == 400
     data = response.json()
     assert data["detail"] == "Cannot submit a proposal that is not in draft or under review status."
+
+def test_upload_edict_file(client):
+    # Create a test edict file
+    edict_content = b"This is a test edict file."
+    edict_filename = "test_edict.txt"
+
+    data = {
+        'name': 'Test Scholarship',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship'
+    }
+
+    files = {
+        'edict_file': (edict_filename, edict_content, 'text/plain')
+    }
+
+    response = client.post("/proposals", data=data, files=files)
+    assert response.status_code == 200
+
+    edict_file_path = os.path.join(os.getcwd(), "edict_files/", edict_filename)
+
+    assert os.path.exists(edict_file_path)
+    with open(edict_file_path, 'rb') as f:
+        content = f.read()
+    assert content == edict_content
+
+def test_upload_document_files(client):
+    # Create test document files
+    document_content1 = b"This is the first test document file."
+    document_filename1 = "test_document1.txt"
+
+    document_content2 = b"This is the second test document file."
+    document_filename2 = "test_document2.txt"
+
+    # Use MultiDict for data
+    data = {
+        'name': 'Test Scholarship with Documents',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+        'document_template': ['True', 'True'],
+        'document_required': ['True', 'False']
+    }
+
+    # Use a list of tuples for files
+    files = [
+        ('edict_file', ('edict.txt', b"Edict content", 'text/plain')),
+        ('document_file', (document_filename1, document_content1, 'text/plain')),
+        ('document_file', (document_filename2, document_content2, 'text/plain')),
+    ]
+
+    response = client.post("/proposals", data=data, files=files)
+    assert response.status_code == 200
+
+    for filename, content in [
+        (document_filename1, document_content1),
+        (document_filename2, document_content2),
+    ]:
+        document_file_path = os.path.join(os.getcwd(), "application_files/", filename)
+
+        assert os.path.exists(document_file_path)
+        with open(document_file_path, 'rb') as f:
+            file_content = f.read()
+        assert file_content == content
+
+def test_upload_invalid_file(client):
+    data = {
+        'name': 'Invalid File Test',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+    }
+
+    files = {
+        'edict_file': ('../file.txt', b"This is a test edict file.", 'text/plain'),
+    }
+
+    response = client.post("/proposals", data=data, files=files)
+    data = response.json()
+    assert response.status_code == 400
+    assert "Invalid filename." in data["detail"]

@@ -1,9 +1,10 @@
 # tests/conftest.py
-
+import os
+import tempfile
 import pytest
 from sqlmodel import SQLModel, Session
 from fastapi.testclient import TestClient
-from app.main import app, get_session
+from app.main import get_session
 from app.database import engine
 
 # Create a test database in memory
@@ -28,7 +29,11 @@ def client_fixture(session):
     def get_session_override():
         yield session
 
-    app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
+    from importlib import reload
+    import app.main
+    reload(app.main)
+
+    app.main.app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app.main.app) as client:
         yield client
-    app.dependency_overrides.clear()
+    app.main.app.dependency_overrides.clear()

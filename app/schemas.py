@@ -42,6 +42,7 @@ class EdictCreate(EdictBase):
 
 class Edict(EdictBase):
     id: int
+    file_path: str
 
     class Config:
         from_attributes  = True
@@ -56,6 +57,8 @@ class DocumentTemplateCreate(DocumentTemplateBase):
 class DocumentTemplate(DocumentTemplateBase):
     id: int
     scholarship_id: int  # Linking to the scholarship it belongs to
+    required: bool
+    template: bool
 
     class Config:
         from_attributes = True
