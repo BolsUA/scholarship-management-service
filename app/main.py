@@ -47,7 +47,7 @@ def update_scholarship_status():
         )).all()
         
         for scholarship in scholarships:
-            scholarship.status = models.ScholarshipStatus.closed
+            scholarship.status = models.ScholarshipStatus.jury_evaluation
             session.add(scholarship)
         
         session.commit()
