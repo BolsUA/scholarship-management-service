@@ -1,6 +1,8 @@
 # tests/test_main.py
 import os
 
+from starlette.datastructures import MultiDict
+
 def test_create_dummy_scholarships(client):
     response = client.post("/scholarships/dummy")
     assert response.status_code == 200
@@ -368,16 +370,18 @@ def test_upload_document_files(client):
     document_content2 = b"This is the second test document file."
     document_filename2 = "test_document2.txt"
 
-    data = [
+    # Use MultiDict for data
+    data = MultiDict([
         ('name', 'Test Scholarship with Documents'),
         ('publisher', 'Test Publisher'),
         ('type', 'Research Scholarship'),
         ('document_template', 'true'),
-        ('document_template', 'true'),  # Second entry
+        ('document_template', 'true'),
         ('document_required', 'true'),
-        ('document_required', 'false'),  # Second entry
-    ]
+        ('document_required', 'false'),
+    ])
 
+    # Use a list of tuples for files
     files = [
         ('edict_file', ('edict.txt', b"Edict content", 'text/plain')),
         ('document_file', (document_filename1, document_content1, 'text/plain')),
