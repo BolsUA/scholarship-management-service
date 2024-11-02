@@ -259,6 +259,7 @@ def create_proposal(
         document_template = document_template or [False] * num_files
         document_required = document_required or [False] * num_files
         print(document_file) 
+        print(document_template) 
         print(document_required) 
 
         if document_template and len(document_template) != num_files:
