@@ -371,22 +371,22 @@ def test_upload_document_files(client):
     document_filename2 = "test_document2.txt"
 
     # Use MultiDict for data
-    data = {
-        'name': 'Test Scholarship with Documents',
-        'publisher': 'Test Publisher',
-        'type': 'Research Scholarship',
-        'document_template': 'True',
-        'document_template': 'True',
-        'document_required': 'True',
-        'document_required': 'False'
-    }
+    data = [
+        ('name', 'Test Scholarship with Documents'),
+        ('publisher', 'Test Publisher'),
+        ('type', 'Research Scholarship'),
+        ('document_template', 'True'),
+        ('document_template', 'True'),
+        ('document_required', 'True'),
+        ('document_required', 'False')
+    ]
 
     # Use a list of tuples for files
-    files = {
-        'edict_file': ('edict.txt', b"Edict content", 'text/plain'),
-        'document_file': (document_filename1, document_content1, 'text/plain'),
-        'document_file': (document_filename2, document_content2, 'text/plain')
-    }
+    files = [
+        ('edict_file', ('edict.txt', b"Edict content", 'text/plain')),
+        ('document_file', (document_filename1, document_content1, 'text/plain')),
+        ('document_file', (document_filename2, document_content2, 'text/plain'))
+    ]
 
     response = client.post("/proposals", data=data, files=files)
     assert response.status_code == 200, response.text
