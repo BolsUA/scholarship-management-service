@@ -371,15 +371,15 @@ def test_upload_document_files(client):
     document_filename2 = "test_document2.txt"
 
     # Use MultiDict for data
-    data = [
-        {'name': 'Test Scholarship with Documents'},
-        {'publisher': 'Test Publisher'},
-        {'type': 'Research Scholarship'},
-        {'document_template': 'true'},
-        {'document_template': 'true'},
-        {'document_required': 'true'},
-        {'document_required': 'false'}
-    ]
+    data = {
+        'name': 'Test Scholarship with Documents',
+        'publisher': 'Test Publisher',
+        'type': 'Research Scholarship',
+        'document_template': 'True',
+        'document_template': 'True',
+        'document_required': 'True',
+        'document_required': 'False'
+    }
 
     # Use a list of tuples for files
     files = {
