@@ -35,7 +35,7 @@ def get_session():
 SessionDep = Annotated[Session, Depends(get_session)]
 
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
-def create_dummy_scholarships(db: SessionDep):
+def create_dummy_scholarships(db: SessionDep, scholarship_id, document_file: Optional[List[UploadFile]] = File(None), document_template: Optional[List[bool]] = Form(None), document_required: Optional[List[bool]] = Form(None),):
     areas_to_create = ["Computer Science", "Biology", "Physics"]
     scientific_areas = {}
 
