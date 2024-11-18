@@ -4,8 +4,7 @@ import tempfile
 import pytest
 from sqlmodel import SQLModel, Session
 from fastapi.testclient import TestClient
-from app.main import get_session
-from app.database import engine
+from app.database import engine, get_session
 
 # Create a test database in memory
 @pytest.fixture(name="engine", scope="session")
