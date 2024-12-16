@@ -66,6 +66,10 @@ def update_scholarship_status():
 scheduler.add_job(update_scholarship_status, "interval", seconds=60) # updates every minute
 scheduler.start()
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
 def create_dummy_scholarships(db: SessionDep):
     areas_to_create = ["Computer Science", "Biology", "Physics"]
@@ -153,7 +157,7 @@ def create_dummy_scholarships(db: SessionDep):
     return dummy_scholarships
 
 # Endpoint to retrieve all scholarships
-@app.get("/scholarships", response_model=List[schemas.Scholarship])
+@app.get("/scholarships/", response_model=List[schemas.Scholarship])
 def get_scholarships(
     db: SessionDep, 
     page: int = 1, 
@@ -244,7 +248,7 @@ def get_scholarship(id: int, db: SessionDep):
     return result
 
 # Combined endpoint to create a proposal and upload required documents
-@app.post("/proposals", response_model=schemas.Scholarship)
+@app.post("/scholarships/proposals", response_model=schemas.Scholarship)
 def create_proposal(
     db: SessionDep,
     name: str = Form(...),
@@ -326,7 +330,7 @@ def create_proposal(
     return new_proposal
 
 # Endpoint to update an existing proposal
-@app.put("/proposals/{proposal_id}", response_model=schemas.Scholarship)
+@app.put("/scholarships/proposals/{proposal_id}", response_model=schemas.Scholarship)
 def update_proposal(
     db: SessionDep,
     proposal_id: int,
@@ -412,7 +416,7 @@ def update_proposal(
     return proposal
 
 # Endpoint to submit a proposal for review
-@app.post("/proposals/{proposal_id}/submit", response_model=dict)
+@app.post("/scholarships/proposals/{proposal_id}/submit", response_model=dict)
 def submit_proposal(proposal_id: int, db: SessionDep):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:

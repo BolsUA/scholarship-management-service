@@ -22,4 +22,4 @@ RUN pip install -r requirements.txt
 
 USER appuser
 
-CMD ["sh", "-c", "python3 wait_for_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8001"]
