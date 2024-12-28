@@ -9,23 +9,23 @@ WORKDIR /scholarship_management
 RUN chown -R appuser:appgroup /scholarship_management
 
 # Set build-time arguments
-ARG REGION
-ARG USER_POOL_ID
-ARG CLIENT_ID
-ARG FRONTEND_URL
+# ARG REGION
+# ARG USER_POOL_ID
+# ARG CLIENT_ID
+# ARG FRONTEND_URL
 
 # Log build-time arguments
-RUN echo "Build-time arguments:" && \
-    echo "REGION=${REGION}" && \
-    echo "USER_POOL_ID=${USER_POOL_ID}" && \
-    echo "CLIENT_ID=${CLIENT_ID}" && \
-    echo "FRONTEND_URL=${FRONTEND_URL}"
+# RUN echo "Build-time arguments:" && \
+#     echo "REGION=${REGION}" && \
+#     echo "USER_POOL_ID=${USER_POOL_ID}" && \
+#     echo "CLIENT_ID=${CLIENT_ID}" && \
+#     echo "FRONTEND_URL=${FRONTEND_URL}"
 
-# Set environment variables
-ENV REGION=${REGION}
-ENV USER_POOL_ID=${USER_POOL_ID}
-ENV CLIENT_ID=${CLIENT_ID}
-ENV FRONTEND_URL=${FRONTEND_URL}
+# # Set environment variables
+# ENV REGION=${REGION}
+# ENV USER_POOL_ID=${USER_POOL_ID}
+# ENV CLIENT_ID=${CLIENT_ID}
+# ENV FRONTEND_URL=${FRONTEND_URL}
 
 # Copy the requirements file
 COPY ./app ./app
