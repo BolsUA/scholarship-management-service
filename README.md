@@ -34,8 +34,10 @@ FastAPI automatically provides interactive API documentation using Swagger UI. Y
 - [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (Swagger UI)
 - [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) (ReDoc UI)
 
-
-
-
-
-
+For this app to work there are several env variables that need to be set:
+- DATABASE_URL = str
+- SECRET_KEY = str
+- REGION = str
+- USER_POOL_ID = str
+- CLIENT_ID = str
+- FRONTEND_URL = str

@@ -1,7 +1,8 @@
 import os
 import shutil
+from starlette.middleware.sessions import SessionMiddleware 
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Annotated, Optional
+from typing import List, Annotated, Optional, Dict
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, SQLModel, select
@@ -10,6 +11,9 @@ from . import models, schemas
 from datetime import date, datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import jwt
+from jwt import PyJWKClient
 from apscheduler.schedulers.background import BackgroundScheduler
 
 @asynccontextmanager
@@ -18,6 +22,13 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     yield
 
+DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
+SECRET_KEY = str(os.getenv('SECRET_KEY', 'K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf'))
+REGION = str(os.getenv('REGION'))
+USER_POOL_ID = str(os.getenv('USER_POOL_ID'))
+CLIENT_ID = str(os.getenv('CLIENT_ID'))
+FRONTEND_URL = str(os.getenv('FRONTEND_URL'))
+COGNITO_KEYS_URL = f'https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json'
 APPLICATION_FILES_DIR = os.getenv("APPLICATION_FILES_DIR", "application_files")
 EDICT_FILES_DIR = os.getenv("EDICT_FILES_DIR", "edict_files")
 
@@ -29,7 +40,9 @@ app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan
 app.mount("/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_files")
 app.mount("/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
 
-origins = ["*"]
+origins = [
+    FRONTEND_URL,
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,11 +52,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+
 # Dependency to get DB session
 def get_session():
     with Session(engine) as session:
         yield session
 
+oauth2_scheme = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
+    token = credentials.credentials
+    
+    try:
+        # Fetch public keys from AWS Cognito
+        jwks_client = PyJWKClient(COGNITO_KEYS_URL)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        
+        # Decode and validate the token
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=CLIENT_ID,
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.PyJWKError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+TokenDep = Annotated[Dict, Depends(verify_token)]
 SessionDep = Annotated[Session, Depends(get_session)]
 
 # Scheduler for deadline detection mecanism
@@ -160,6 +199,7 @@ def create_dummy_scholarships(db: SessionDep):
 @app.get("/scholarships/", response_model=List[schemas.Scholarship])
 def get_scholarships(
     db: SessionDep, 
+    token: TokenDep,
     page: int = 1, 
     limit: int = 10,
     name: Optional[str] = Query(None),
@@ -210,7 +250,7 @@ def get_scholarships(
     return results
 
 @app.get("/scholarships/filters", response_model=schemas.FilterOptionsResponse)
-def get_filter_options(db: SessionDep):
+def get_filter_options(db: SessionDep, token: TokenDep):
     # Retrieve distinct types of scholarships
     types = db.exec(select(models.Scholarship.type).distinct()).all()
     types = [t for t in types if t]  # Extract values from tuples and exclude None
@@ -240,7 +280,7 @@ def get_filter_options(db: SessionDep):
 
 # Endpoint to retrieve a single scholarship by ID
 @app.get("/scholarships/{id}/details", response_model=schemas.Scholarship)
-def get_scholarship(id: int, db: SessionDep):
+def get_scholarship(id: int, db: SessionDep, token: TokenDep):
     statement = select(models.Scholarship).where(models.Scholarship.id == id)
     result = db.exec(statement).first()
     if result is None:
@@ -251,6 +291,7 @@ def get_scholarship(id: int, db: SessionDep):
 @app.post("/scholarships/proposals", response_model=schemas.Scholarship)
 def create_proposal(
     db: SessionDep,
+    token: TokenDep,
     name: str = Form(...),
     description: Optional[str] = Form(None),
     publisher: str = Form(...),
@@ -279,13 +320,9 @@ def create_proposal(
 
     if document_file:
         num_files = len(document_file)
-        print(num_files) 
         # Provide default values if flags are None
         document_template = document_template or [False] * num_files
         document_required = document_required or [False] * num_files
-        print(document_file) 
-        print(document_template) 
-        print(document_required) 
 
         if document_template and len(document_template) != num_files:
             raise HTTPException(status_code=400, detail="Number of 'template' flags must match number of documents.")
@@ -333,6 +370,7 @@ def create_proposal(
 @app.put("/scholarships/proposals/{proposal_id}", response_model=schemas.Scholarship)
 def update_proposal(
     db: SessionDep,
+    token: TokenDep,
     proposal_id: int,
     name: Optional[str] = Form(None),
     jury: Optional[List[int]] = Form(None),
@@ -417,7 +455,7 @@ def update_proposal(
 
 # Endpoint to submit a proposal for review
 @app.post("/scholarships/proposals/{proposal_id}/submit", response_model=dict)
-def submit_proposal(proposal_id: int, db: SessionDep):
+def submit_proposal(proposal_id: int, db: SessionDep, token: TokenDep):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
