@@ -21,6 +21,7 @@ class ScholarshipJuryLink(SQLModel, table=True):
 
 class Jury(SQLModel, table=True):
     id: Optional[str] = Field(default=None, primary_key=True)
+    name: str = Field(nullable=False)
 
     scholarships: List["Scholarship"] = Relationship(
         back_populates="jury", link_model=ScholarshipJuryLink

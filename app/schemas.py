@@ -12,7 +12,7 @@ class ScholarshipStatus(str, Enum):
     closed = "Closed"
 
 class JuryBase(BaseModel):
-    pass
+    name: str
 
 class JuryCreate(JuryBase):
     pass

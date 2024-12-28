@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from starlette.middleware.sessions import SessionMiddleware 
@@ -37,8 +38,8 @@ os.makedirs(EDICT_FILES_DIR, exist_ok=True)
 
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan)
 
-app.mount("/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_files")
-app.mount("/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
+app.mount("/scholarships/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_files")
+app.mount("/scholarships/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
 
 origins = [
     '*',
@@ -197,8 +198,7 @@ def create_dummy_scholarships(db: SessionDep):
 # Endpoint to retrieve all scholarships
 @app.get("/scholarships/", response_model=List[schemas.Scholarship])
 def get_scholarships(
-    db: SessionDep, 
-    token: TokenDep,
+    db: SessionDep,
     page: int = 1, 
     limit: int = 10,
     name: Optional[str] = Query(None),
@@ -249,7 +249,7 @@ def get_scholarships(
     return results
 
 @app.get("/scholarships/filters", response_model=schemas.FilterOptionsResponse)
-def get_filter_options(db: SessionDep, token: TokenDep):
+def get_filter_options(db: SessionDep):
     # Retrieve distinct types of scholarships
     types = db.exec(select(models.Scholarship.type).distinct()).all()
     types = [t for t in types if t]  # Extract values from tuples and exclude None
@@ -279,7 +279,7 @@ def get_filter_options(db: SessionDep, token: TokenDep):
 
 # Endpoint to retrieve a single scholarship by ID
 @app.get("/scholarships/{id}/details", response_model=schemas.Scholarship)
-def get_scholarship(id: int, db: SessionDep, token: TokenDep):
+def get_scholarship(id: int, db: SessionDep):
     statement = select(models.Scholarship).where(models.Scholarship.id == id)
     result = db.exec(statement).first()
     if result is None:
@@ -301,6 +301,7 @@ def create_proposal(
     scientific_areas: List[str] = Form(None),
     edict_file: UploadFile = File(...),
     document_file: Optional[List[UploadFile]] = File(None),
+    document_name: Optional[List[str]] = Form(None),
     document_template: Optional[List[bool]] = Form(None),
     document_required: Optional[List[bool]] = Form(None)
 ):
@@ -318,8 +319,8 @@ def create_proposal(
             db.refresh(new_area)
             associated_scientific_areas.append(new_area)
 
-    if document_file:
-        num_files = len(document_file)
+    if document_name:
+        num_files = len(document_name)
         # Provide default values if flags are None
         document_template = document_template or [False] * num_files
         document_required = document_required or [False] * num_files
@@ -328,15 +329,23 @@ def create_proposal(
             raise HTTPException(status_code=400, detail="Number of 'template' flags must match number of documents.")
         if document_required and len(document_required) != num_files:
             raise HTTPException(status_code=400, detail="Number of 'required' flags must match number of documents.")
+            
 
     # Create an edict record
     new_edict = create_edict_record(db, edict_file)
 
     associated_jury = []
-    for jury_id in jury or []:
-        jury = db.get(models.Jury, jury_id)
+
+    for juror in jury or []:
+        juror = json.loads(juror)
+        jury = db.get(models.Jury, juror.get("id"))
+
         if not jury:
-            jury = models.Jury(id=jury_id)
+            jury = models.Jury(id=juror.get("id"), name=juror["name"])
+            db.add(jury)
+            db.commit()
+            db.refresh(jury)
+
         associated_jury.append(jury)
 
     # Create the proposal and associate it with the edict
@@ -360,10 +369,11 @@ def create_proposal(
         raise HTTPException(status_code=500, detail="Failed to retrieve proposal ID.")
 
     # Update document file(s) if provided and not empty
-    for idx, file in enumerate(document_file or []):
+    for idx, name in enumerate(document_name or []):
+        file = document_file[idx] if document_file else None
         required_flag = document_required[idx] if document_required else False  # Default to False if not provided
         template_flag = document_template[idx] if document_template else False  # Default to False if not provided
-        create_document(db, new_proposal.id, file, required_flag, template_flag)
+        create_document(db, new_proposal.id, file, name, required_flag, template_flag)
 
     return new_proposal
 
@@ -382,6 +392,7 @@ def update_proposal(
     description: Optional[str] = Form(None),
     edict_file: Optional[UploadFile] = File(None),
     document_file: Optional[List[UploadFile]] = File(None),
+    document_name: Optional[List[str]] = Form(None),
     document_template: Optional[List[bool]] = Form(None),
     document_required: Optional[List[bool]] = Form(None),
     scientific_areas: Optional[List[str]] = Form(None)
@@ -390,8 +401,8 @@ def update_proposal(
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
-    if document_file:
-        num_files = len(document_file)
+    if document_name:
+        num_files = len(document_name)
         
         # Provide default values if flags are None
         document_template = document_template or [False] * num_files
@@ -445,10 +456,11 @@ def update_proposal(
         create_edict_record(db, edict_file)
 
     # Update document file(s) if provided and not empty
-    for idx, file in enumerate(document_file or []):
+    for idx, name in enumerate(document_name or []):
+        file = document_file[idx] if document_file else None
         required_flag = document_required[idx] if document_required else False  # Default to False if not provided
         template_flag = document_template[idx] if document_template else False  # Default to False if not provided
-        create_document(db, proposal.id, file, required_flag, template_flag)
+        create_document(db, proposal.id, file, name, required_flag, template_flag)
 
     db.commit()
     db.refresh(proposal)
@@ -521,8 +533,6 @@ def save_file(file: UploadFile, directory: str) -> str:
         raise HTTPException(status_code=500, detail="Could not save file.")
 
     file_path = os.path.join(directory, file.filename)
-    # with open(file_path, "wb") as f:
-    #     f.write(file.file.read())
     return file_path
 
 def create_edict_record(db: Session, edict_file: UploadFile, name: Optional[str] = None) -> models.Edict:
@@ -542,12 +552,7 @@ def create_edict_record(db: Session, edict_file: UploadFile, name: Optional[str]
     db.refresh(new_edict)
     return new_edict
 
-def create_document(db: Session, proposal_id: int, file: UploadFile, required: bool = True, template: bool = True) -> models.DocumentTemplate:
-    document_name = get_filename_without_extension(file)
-
-    if not document_name:
-        raise HTTPException(status_code=400, detail="Document name could not be determined")
-
+def create_document(db: Session, proposal_id: int, file: UploadFile, name: str, required: bool = True, template: bool = True) -> models.DocumentTemplate:
     # Save the document file
     file_location = ""
     if template:
@@ -556,7 +561,7 @@ def create_document(db: Session, proposal_id: int, file: UploadFile, required: b
     # Create the document template record
     new_document = models.DocumentTemplate(
         scholarship_id=proposal_id,
-        name=document_name,
+        name=name,
         file_path=file_location,
         required=required,
         template=template
