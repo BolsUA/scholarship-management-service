@@ -295,6 +295,7 @@ def create_proposal(
     description: Optional[str] = Form(None),
     publisher: str = Form(...),
     type: str = Form(...),
+    spots: int = Form(...),
     jury: Optional[List[str]] = Form(None),
     deadline: Optional[date] = Form(None),
     scientific_areas: List[str] = Form(None),
@@ -344,9 +345,10 @@ def create_proposal(
         description=description,
         publisher=publisher,
         type=type,
+        spots=spots,
         jury=associated_jury,
         deadline=deadline,
-        status=models.ScholarshipStatus.draft,
+        status=models.ScholarshipStatus.open,
         edict_id=new_edict.id,
         scientific_areas=associated_scientific_areas
     )

@@ -50,6 +50,7 @@ class Scholarship(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     publisher: str = Field(nullable=False)
     type: str = Field(nullable=False)
+    spots: int = Field(nullable=False)
     jury: List[Jury] = Relationship(
         back_populates="scholarships", link_model=ScholarshipJuryLink
     )

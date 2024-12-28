@@ -68,6 +68,7 @@ class ScholarshipBase(BaseModel):
     description: Optional[str] = None
     publisher: str
     type: str
+    spots: int
     deadline: Optional[date] = None
     status: ScholarshipStatus
 
