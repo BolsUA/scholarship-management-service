@@ -1,7 +1,7 @@
 import json
 import os
 import shutil
-from starlette.middleware.sessions import SessionMiddleware 
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Optional, Dict
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
@@ -17,19 +17,23 @@ import jwt
 from jwt import PyJWKClient
 from apscheduler.schedulers.background import BackgroundScheduler
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup event
     SQLModel.metadata.create_all(engine)
     yield
 
+
 DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
-SECRET_KEY = str(os.getenv('SECRET_KEY', 'K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf'))
-REGION = str(os.getenv('REGION'))
-USER_POOL_ID = str(os.getenv('USER_POOL_ID'))
-CLIENT_ID = str(os.getenv('CLIENT_ID'))
-FRONTEND_URL = str(os.getenv('FRONTEND_URL'))
-COGNITO_KEYS_URL = f'https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json'
+SECRET_KEY = str(os.getenv("SECRET_KEY", "K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf"))
+REGION = str(os.getenv("REGION"))
+USER_POOL_ID = str(os.getenv("USER_POOL_ID"))
+CLIENT_ID = str(os.getenv("CLIENT_ID"))
+FRONTEND_URL = str(os.getenv("FRONTEND_URL"))
+COGNITO_KEYS_URL = (
+    f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
+)
 APPLICATION_FILES_DIR = os.getenv("APPLICATION_FILES_DIR", "application_files")
 EDICT_FILES_DIR = os.getenv("EDICT_FILES_DIR", "edict_files")
 
@@ -38,11 +42,19 @@ os.makedirs(EDICT_FILES_DIR, exist_ok=True)
 
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight": True}, lifespan=lifespan)
 
-app.mount("/scholarships/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_files")
-app.mount("/scholarships/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
+app.mount(
+    "/scholarships/edict_files",
+    StaticFiles(directory=EDICT_FILES_DIR),
+    name="edict_files",
+)
+app.mount(
+    "/scholarships/application_files",
+    StaticFiles(directory=APPLICATION_FILES_DIR),
+    name="application_files",
+)
 
 origins = [
-    '*',
+    "*",
 ]
 
 app.add_middleware(
@@ -55,32 +67,32 @@ app.add_middleware(
 
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
+
 # Dependency to get DB session
 def get_session():
     with Session(engine) as session:
         yield session
 
+
 oauth2_scheme = HTTPBearer()
+
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
     token = credentials.credentials
-    
+
     try:
         # Fetch public keys from AWS Cognito
         jwks_client = PyJWKClient(COGNITO_KEYS_URL)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
-        
+
         # Decode and validate the token
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256"]
-        )
+        payload = jwt.decode(token, signing_key.key, algorithms=["RS256"])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 TokenDep = Annotated[Dict, Depends(verify_token)]
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -88,26 +100,34 @@ SessionDep = Annotated[Session, Depends(get_session)]
 # Scheduler for deadline detection mecanism
 scheduler = BackgroundScheduler()
 
+
 def update_scholarship_status():
     with Session(engine) as session:
         today = datetime.today().date()
-        scholarships = session.exec(select(models.Scholarship).where(
-            models.Scholarship.status == models.ScholarshipStatus.open, 
-            models.Scholarship.deadline < today
-        )).all()
-        
+        scholarships = session.exec(
+            select(models.Scholarship).where(
+                models.Scholarship.status == models.ScholarshipStatus.open,
+                models.Scholarship.deadline < today,
+            )
+        ).all()
+
         for scholarship in scholarships:
             scholarship.status = models.ScholarshipStatus.jury_evaluation
             session.add(scholarship)
-        
+
         session.commit()
 
-scheduler.add_job(update_scholarship_status, "interval", seconds=60) # updates every minute
+
+scheduler.add_job(
+    update_scholarship_status, "interval", seconds=60
+)  # updates every minute
 scheduler.start()
+
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
 
 @app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
 def create_dummy_scholarships(db: SessionDep):
@@ -116,15 +136,17 @@ def create_dummy_scholarships(db: SessionDep):
 
     # Iterate over the areas to create or fetch them from the database
     for area_name in areas_to_create:
-        statement = select(models.ScientificArea).where(models.ScientificArea.name == area_name)
+        statement = select(models.ScientificArea).where(
+            models.ScientificArea.name == area_name
+        )
         area = db.exec(statement).first()
-        
+
         if not area:
             area = models.ScientificArea(name=area_name)
             db.add(area)
             db.commit()
             db.refresh(area)
-        
+
         scientific_areas[area_name] = area
 
     # Create or get jury members
@@ -132,7 +154,9 @@ def create_dummy_scholarships(db: SessionDep):
     jury = {}
 
     for jury_name in jury_to_create:
-        juror = db.exec(select(models.Jury).where(models.Jury.name == jury_name)).first()
+        juror = db.exec(
+            select(models.Jury).where(models.Jury.name == jury_name)
+        ).first()
         if not juror:
             juror = models.Jury(name=jury_name)
             db.add(juror)
@@ -146,7 +170,9 @@ def create_dummy_scholarships(db: SessionDep):
             name="Scholarship A",
             description="A brief description of Scholarship A.",
             publisher="University of XYZ",
-            scientific_areas=[scientific_areas["Biology"]],  # Change this if you have scientific area data
+            scientific_areas=[
+                scientific_areas["Biology"]
+            ],  # Change this if you have scientific area data
             type="Research Initiation Scholarship",
             jury=[jury["Dr. Alice"], jury["Dr. Bob"]],
             deadline=date(2024, 12, 31),
@@ -154,13 +180,16 @@ def create_dummy_scholarships(db: SessionDep):
             approved_at=None,
             results_at=None,
             status=models.ScholarshipStatus.jury_evaluation,
-            edict_id=None
+            edict_id=None,
         ),
         models.Scholarship(
             name="Scholarship B",
             description="A brief description of Scholarship B.",
             publisher="Institute of ABC",
-            scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
+            scientific_areas=[
+                scientific_areas["Computer Science"],
+                scientific_areas["Physics"],
+            ],  # Change this if you have scientific area data
             type="Research Scholarship",
             jury=[jury["Dr. Carol"]],
             deadline=date(2024, 11, 15),
@@ -168,13 +197,16 @@ def create_dummy_scholarships(db: SessionDep):
             approved_at=None,
             results_at=None,
             status=models.ScholarshipStatus.open,
-            edict_id=None
+            edict_id=None,
         ),
         models.Scholarship(
             name="Scholarship C",
             description="A brief description of Scholarship C.",
             publisher="Bla bla",
-            scientific_areas=[scientific_areas["Computer Science"], scientific_areas["Physics"]],  # Change this if you have scientific area data
+            scientific_areas=[
+                scientific_areas["Computer Science"],
+                scientific_areas["Physics"],
+            ],  # Change this if you have scientific area data
             type="Research Scholarship",
             jury=[jury["Dr. Alice"], jury["Dr. Carol"]],
             deadline=date(2024, 11, 15),
@@ -182,8 +214,8 @@ def create_dummy_scholarships(db: SessionDep):
             approved_at=None,
             results_at=None,
             status=models.ScholarshipStatus.closed,
-            edict_id=None
-        )
+            edict_id=None,
+        ),
     ]
 
     # Insert dummy scholarships into the database
@@ -195,11 +227,12 @@ def create_dummy_scholarships(db: SessionDep):
 
     return dummy_scholarships
 
+
 # Endpoint to retrieve all scholarships
 @app.get("/scholarships/", response_model=List[schemas.Scholarship])
 def get_scholarships(
     db: SessionDep,
-    page: int = 1, 
+    page: int = 1,
     limit: int = 10,
     name: Optional[str] = Query(None),
     status: Optional[List[models.ScholarshipStatus]] = Query(None),
@@ -208,8 +241,8 @@ def get_scholarships(
     types: Optional[List[str]] = Query(None),
     jury_name: Optional[str] = Query(None),
     deadline_start: Optional[date] = Query(None),
-    deadline_end: Optional[date] = Query(None)
-    ):
+    deadline_end: Optional[date] = Query(None),
+):
 
     offset = (page - 1) * limit
 
@@ -246,7 +279,14 @@ def get_scholarships(
 
     results = db.exec(statement).all()
 
-    return results
+    unique_scholarships = []
+
+    for scholarship in results:
+        if scholarship not in unique_scholarships:
+            unique_scholarships.append(scholarship)
+
+    return unique_scholarships
+
 
 @app.get("/scholarships/filters", response_model=schemas.FilterOptionsResponse)
 def get_filter_options(db: SessionDep):
@@ -259,7 +299,9 @@ def get_filter_options(db: SessionDep):
     scientific_areas = [sa for sa in scientific_areas if sa]
 
     # Get all possible statuses from the ScholarshipStatus enum
-    status = [schemas.ScholarshipStatus(status.value) for status in models.ScholarshipStatus]
+    status = [
+        schemas.ScholarshipStatus(status.value) for status in models.ScholarshipStatus
+    ]
 
     # Retrieve distinct publishers
     publishers = db.exec(select(models.Scholarship.publisher).distinct()).all()
@@ -277,6 +319,7 @@ def get_filter_options(db: SessionDep):
         deadlines=deadlines,
     )
 
+
 # Endpoint to retrieve a single scholarship by ID
 @app.get("/scholarships/{id}/details", response_model=schemas.Scholarship)
 def get_scholarship(id: int, db: SessionDep):
@@ -285,6 +328,7 @@ def get_scholarship(id: int, db: SessionDep):
     if result is None:
         raise HTTPException(status_code=404, detail="Scholarship not found")
     return result
+
 
 # Combined endpoint to create a proposal and upload required documents
 @app.post("/scholarships/proposals", response_model=schemas.Scholarship)
@@ -303,13 +347,15 @@ def create_proposal(
     document_file: Optional[List[UploadFile]] = File(None),
     document_name: Optional[List[str]] = Form(None),
     document_template: Optional[List[bool]] = Form(None),
-    document_required: Optional[List[bool]] = Form(None)
+    document_required: Optional[List[bool]] = Form(None),
 ):
     # Query the database for scientific areas based on the provided names
     associated_scientific_areas = []
     for area_name in scientific_areas or []:
         # Check if the scientific area already exists in the database
-        area = db.exec(select(models.ScientificArea).where(models.ScientificArea.name == area_name)).first()
+        area = db.exec(
+            select(models.ScientificArea).where(models.ScientificArea.name == area_name)
+        ).first()
         if area:
             associated_scientific_areas.append(area)
         else:
@@ -326,10 +372,15 @@ def create_proposal(
         document_required = document_required or [False] * num_files
 
         if document_template and len(document_template) != num_files:
-            raise HTTPException(status_code=400, detail="Number of 'template' flags must match number of documents.")
+            raise HTTPException(
+                status_code=400,
+                detail="Number of 'template' flags must match number of documents.",
+            )
         if document_required and len(document_required) != num_files:
-            raise HTTPException(status_code=400, detail="Number of 'required' flags must match number of documents.")
-            
+            raise HTTPException(
+                status_code=400,
+                detail="Number of 'required' flags must match number of documents.",
+            )
 
     # Create an edict record
     new_edict = create_edict_record(db, edict_file)
@@ -359,7 +410,7 @@ def create_proposal(
         deadline=deadline,
         status=models.ScholarshipStatus.open,
         edict_id=new_edict.id,
-        scientific_areas=associated_scientific_areas
+        scientific_areas=associated_scientific_areas,
     )
     db.add(new_proposal)
     db.commit()
@@ -371,11 +422,16 @@ def create_proposal(
     # Update document file(s) if provided and not empty
     for idx, name in enumerate(document_name or []):
         file = document_file[idx] if document_file else None
-        required_flag = document_required[idx] if document_required else False  # Default to False if not provided
-        template_flag = document_template[idx] if document_template else False  # Default to False if not provided
+        required_flag = (
+            document_required[idx] if document_required else False
+        )  # Default to False if not provided
+        template_flag = (
+            document_template[idx] if document_template else False
+        )  # Default to False if not provided
         create_document(db, new_proposal.id, file, name, required_flag, template_flag)
 
     return new_proposal
+
 
 # Endpoint to update an existing proposal
 @app.put("/scholarships/proposals/{proposal_id}", response_model=schemas.Scholarship)
@@ -395,7 +451,7 @@ def update_proposal(
     document_name: Optional[List[str]] = Form(None),
     document_template: Optional[List[bool]] = Form(None),
     document_required: Optional[List[bool]] = Form(None),
-    scientific_areas: Optional[List[str]] = Form(None)
+    scientific_areas: Optional[List[str]] = Form(None),
 ):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:
@@ -403,38 +459,56 @@ def update_proposal(
 
     if document_name:
         num_files = len(document_name)
-        
+
         # Provide default values if flags are None
         document_template = document_template or [False] * num_files
         document_required = document_required or [False] * num_files
 
         if document_template and len(document_template) != num_files:
-            raise HTTPException(status_code=400, detail="Number of 'template' flags must match number of documents.")
+            raise HTTPException(
+                status_code=400,
+                detail="Number of 'template' flags must match number of documents.",
+            )
         if document_required and len(document_required) != num_files:
-            raise HTTPException(status_code=400, detail="Number of 'required' flags must match number of documents.")
+            raise HTTPException(
+                status_code=400,
+                detail="Number of 'required' flags must match number of documents.",
+            )
 
     if deadline is not None:
         try:
             # Assuming the deadline is in 'YYYY-MM-DD' format
-            deadline_datetime = datetime.strptime(deadline, '%Y-%m-%d')
-            proposal.deadline = deadline_datetime if deadline_datetime is not None else proposal.deadline
+            deadline_datetime = datetime.strptime(deadline, "%Y-%m-%d")
+            proposal.deadline = (
+                deadline_datetime
+                if deadline_datetime is not None
+                else proposal.deadline
+            )
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid date format for deadline. Expected 'YYYY-MM-DD'."
+                detail="Invalid date format for deadline. Expected 'YYYY-MM-DD'.",
             )
 
     # Update the proposal's fields if provided in the request
     proposal.name = name if name is not None else proposal.name
-    proposal.description = description if description is not None else proposal.description
+    proposal.description = (
+        description if description is not None else proposal.description
+    )
     proposal.publisher = publisher if publisher is not None else proposal.publisher
     proposal.type = type if type is not None else proposal.type
-    proposal.status = models.ScholarshipStatus(status) if status is not None else proposal.status
+    proposal.status = (
+        models.ScholarshipStatus(status) if status is not None else proposal.status
+    )
 
     if scientific_areas:
         proposal.scientific_areas.clear()
         for area_name in scientific_areas:
-            area = db.exec(select(models.ScientificArea).where(models.ScientificArea.name == area_name)).first()
+            area = db.exec(
+                select(models.ScientificArea).where(
+                    models.ScientificArea.name == area_name
+                )
+            ).first()
             if not area:
                 # Create new scientific area if it doesn't exist
                 area = models.ScientificArea(name=area_name)
@@ -442,13 +516,15 @@ def update_proposal(
                 db.commit()
                 db.refresh(area)
             proposal.scientific_areas.append(area)
-      
+
     if jury is not None:
         proposal.jury.clear()
         for jury_id in jury:
             jury = db.get(models.Jury, jury_id)
             if not jury:
-                raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
+                raise HTTPException(
+                    status_code=404, detail=f"Jury with id {jury_id} not found"
+                )
             proposal.jury.append(jury)
 
     # Update edict file if provided and not empty
@@ -458,13 +534,18 @@ def update_proposal(
     # Update document file(s) if provided and not empty
     for idx, name in enumerate(document_name or []):
         file = document_file[idx] if document_file else None
-        required_flag = document_required[idx] if document_required else False  # Default to False if not provided
-        template_flag = document_template[idx] if document_template else False  # Default to False if not provided
+        required_flag = (
+            document_required[idx] if document_required else False
+        )  # Default to False if not provided
+        template_flag = (
+            document_template[idx] if document_template else False
+        )  # Default to False if not provided
         create_document(db, proposal.id, file, name, required_flag, template_flag)
 
     db.commit()
     db.refresh(proposal)
     return proposal
+
 
 # Endpoint to submit a proposal for review
 @app.post("/scholarships/proposals/{proposal_id}/submit", response_model=dict)
@@ -472,8 +553,14 @@ def submit_proposal(proposal_id: int, db: SessionDep, token: TokenDep):
     proposal = db.get(models.Scholarship, proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if models.ScholarshipStatus(proposal.status) not in [models.ScholarshipStatus.draft, models.ScholarshipStatus.under_review]:
-        raise HTTPException(status_code=400, detail="Cannot submit a proposal that is not in draft or under review status.")
+    if models.ScholarshipStatus(proposal.status) not in [
+        models.ScholarshipStatus.draft,
+        models.ScholarshipStatus.under_review,
+    ]:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot submit a proposal that is not in draft or under review status.",
+        )
 
     # Check if all required fields are filled before submission
     required_fields = {
@@ -482,28 +569,37 @@ def submit_proposal(proposal_id: int, db: SessionDep, token: TokenDep):
         "type": proposal.type,
         "deadline": proposal.deadline,
         "scientific_areas": proposal.scientific_areas,
-        "edict": proposal.edict
+        "edict": proposal.edict,
     }
 
     # Check if any required field is missing
-    missing_fields = [field_name for field_name, value in required_fields.items() if not value]
+    missing_fields = [
+        field_name for field_name, value in required_fields.items() if not value
+    ]
     if missing_fields:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Cannot submit proposal. The following required fields are missing: {', '.join(missing_fields)}"
+            status_code=400,
+            detail=f"Cannot submit proposal. The following required fields are missing: {', '.join(missing_fields)}",
         )
 
     # Validate that at least one scientific area is associated
     if not proposal.scientific_areas:
-        raise HTTPException(status_code=400, detail="At least one scientific area must be associated with the proposal.")
+        raise HTTPException(
+            status_code=400,
+            detail="At least one scientific area must be associated with the proposal.",
+        )
     # Validate that at least one document is associated
     if not proposal.documents:
-        raise HTTPException(status_code=400, detail="At least one document must be associated if the proposal.")
+        raise HTTPException(
+            status_code=400,
+            detail="At least one document must be associated if the proposal.",
+        )
 
     # Update proposal status to "under_review"
     proposal.status = models.ScholarshipStatus.under_review
     db.commit()
     return {"message": "Proposal submitted successfully. It will be reviewed shortly."}
+
 
 def get_filename_without_extension(file: Optional[UploadFile]) -> Optional[str]:
     if file is None or file.filename is None:
@@ -511,6 +607,7 @@ def get_filename_without_extension(file: Optional[UploadFile]) -> Optional[str]:
     # Split the filename into the name and extension
     filename, _ = os.path.splitext(file.filename)
     return filename
+
 
 def save_file(file: UploadFile, directory: str) -> str:
     # Create the directory if it doesn't exist
@@ -521,7 +618,7 @@ def save_file(file: UploadFile, directory: str) -> str:
 
     # Sanitize the filename to prevent directory traversal attacks
     filename = os.path.basename(file.filename)
-    if filename != file.filename or '..' in filename or filename.startswith('/'):
+    if filename != file.filename or ".." in filename or filename.startswith("/"):
         raise HTTPException(status_code=400, detail="Invalid filename.")
 
     file_path = os.path.join(directory, filename)
@@ -535,24 +632,34 @@ def save_file(file: UploadFile, directory: str) -> str:
     file_path = os.path.join(directory, file.filename)
     return file_path
 
-def create_edict_record(db: Session, edict_file: UploadFile, name: Optional[str] = None) -> models.Edict:
+
+def create_edict_record(
+    db: Session, edict_file: UploadFile, name: Optional[str] = None
+) -> models.Edict:
     # Get the filename without extension and set a default name if necessary
-    edict_name = name or get_filename_without_extension(edict_file) or "default_filename"
-    
+    edict_name = (
+        name or get_filename_without_extension(edict_file) or "default_filename"
+    )
+
     # Save the edict file
     edict_file_location = save_file(edict_file, "edict_files")
 
     # Create the edict record
-    new_edict = models.Edict(
-        name=edict_name,
-        file_path=edict_file_location
-    )
+    new_edict = models.Edict(name=edict_name, file_path=edict_file_location)
     db.add(new_edict)
     db.commit()
     db.refresh(new_edict)
     return new_edict
 
-def create_document(db: Session, proposal_id: int, file: UploadFile, name: str, required: bool = True, template: bool = True) -> models.DocumentTemplate:
+
+def create_document(
+    db: Session,
+    proposal_id: int,
+    file: UploadFile,
+    name: str,
+    required: bool = True,
+    template: bool = True,
+) -> models.DocumentTemplate:
     # Save the document file
     file_location = ""
     if template:
@@ -564,7 +671,7 @@ def create_document(db: Session, proposal_id: int, file: UploadFile, name: str, 
         name=name,
         file_path=file_location,
         required=required,
-        template=template
+        template=template,
     )
     db.add(new_document)
     db.commit()
