@@ -73,13 +73,12 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_sche
         payload = jwt.decode(
             token,
             signing_key.key,
-            algorithms=["RS256"],
-            audience=CLIENT_ID,
+            algorithms=["RS256"]
         )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.PyJWKError:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 TokenDep = Annotated[Dict, Depends(verify_token)]
