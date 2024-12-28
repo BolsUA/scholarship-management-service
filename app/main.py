@@ -41,7 +41,7 @@ app.mount("/edict_files", StaticFiles(directory=EDICT_FILES_DIR), name="edict_fi
 app.mount("/application_files", StaticFiles(directory=APPLICATION_FILES_DIR), name="application_files")
 
 origins = [
-    FRONTEND_URL,
+    '*',
 ]
 
 app.add_middleware(
@@ -295,7 +295,7 @@ def create_proposal(
     description: Optional[str] = Form(None),
     publisher: str = Form(...),
     type: str = Form(...),
-    jury: Optional[List[int]] = Form(None),
+    jury: Optional[List[str]] = Form(None),
     deadline: Optional[date] = Form(None),
     scientific_areas: List[str] = Form(None),
     edict_file: UploadFile = File(...),
@@ -335,7 +335,7 @@ def create_proposal(
     for jury_id in jury or []:
         jury = db.get(models.Jury, jury_id)
         if not jury:
-            raise HTTPException(status_code=404, detail=f"Jury with id {jury_id} not found")
+            jury = models.Jury(id=jury_id)
         associated_jury.append(jury)
 
     # Create the proposal and associate it with the edict
@@ -372,7 +372,7 @@ def update_proposal(
     token: TokenDep,
     proposal_id: int,
     name: Optional[str] = Form(None),
-    jury: Optional[List[int]] = Form(None),
+    jury: Optional[List[str]] = Form(None),
     status: Optional[str] = Form(None),
     deadline: Optional[str] = Form(None),
     type: Optional[str] = Form(None),
@@ -512,7 +512,6 @@ def save_file(file: UploadFile, directory: str) -> str:
 
     file_path = os.path.join(directory, filename)
 
-    print(filename)
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)

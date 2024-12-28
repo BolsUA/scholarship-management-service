@@ -12,13 +12,13 @@ class ScholarshipStatus(str, Enum):
     closed = "Closed"
 
 class JuryBase(BaseModel):
-    name: str
+    pass
 
 class JuryCreate(JuryBase):
     pass
 
 class JuryRead(JuryBase):
-    id: int
+    id: str
 
 class ScientificAreaBase(BaseModel):
     name: str
@@ -72,7 +72,7 @@ class ScholarshipBase(BaseModel):
     status: ScholarshipStatus
 
 class ScholarshipCreate(ScholarshipBase):
-    jury: Optional[List[int]] = None
+    jury: Optional[List[str]] = None
     documents: Optional[List[DocumentTemplateCreate]] = None
     edict_id: Optional[int] = None
 
