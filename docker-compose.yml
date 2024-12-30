@@ -17,7 +17,9 @@ services:
       - USER_POOL_ID=
       - CLIENT_ID=
       - FRONTEND_URL=http://localhost:3000
-      
+      - QUEUE_URL=
+      - AWS_ACCESS_KEY_ID=
+      - AWS_SECRET_ACCESS_KEY=      
   db:
     image: postgres:13
     environment:
