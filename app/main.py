@@ -227,6 +227,37 @@ def create_dummy_scholarships(db: SessionDep):
 
     return dummy_scholarships
 
+@app.put("/scholarships/{scholarship_id}/status/jury_evaluation")
+def update_scholarship_status_to_jury_evaluation(scholarship_id: int, db: SessionDep):
+    # test function to update scholarship status to jury evaluation
+    scholarship = db.get(models.Scholarship, scholarship_id)
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    
+    scholarship.status = models.ScholarshipStatus.jury_evaluation
+    db.commit()
+    db.refresh(scholarship)
+    return {"message": "Scholarship status updated to jury evaluation", "scholarship": scholarship}
+
+@app.get("/scholarships/jury/{user_id}", response_model=List[schemas.Scholarship])
+def get_scholarships_for_jury_member(
+        db: SessionDep,
+        token: TokenDep,
+        user_id: str
+    ):
+    # Retrieve scholarships that are currently under jury evaluation and assigned to the user
+    statement = (
+        select(models.Scholarship)
+        .join(models.ScholarshipJuryLink)
+        .join(models.Jury)
+        .where(
+            models.Jury.id == user_id,
+            models.Scholarship.status == models.ScholarshipStatus.jury_evaluation,
+        )
+    )
+    scholarships = db.exec(statement).all()
+    return scholarships
+
 
 # Endpoint to retrieve all scholarships
 @app.get("/scholarships/", response_model=List[schemas.Scholarship])
