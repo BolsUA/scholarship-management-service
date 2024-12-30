@@ -1,22 +1,21 @@
+import boto3
 import json
 import os
 import shutil
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Optional, Dict
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, SQLModel, select
 from .database import engine
 from . import models, schemas
 from datetime import date, datetime
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from jwt import PyJWKClient
 from apscheduler.schedulers.background import BackgroundScheduler
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +23,9 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     yield
 
+QUEUE_URL = str(os.getenv("QUEUE_URL"))
+AWS_ACESS_KEY_ID = str(os.getenv("AWS_ACCESS_KEY_ID"))
+AWS_SECRET_ACCESS_KEY = str(os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
 SECRET_KEY = str(os.getenv("SECRET_KEY", "K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf"))
@@ -67,6 +69,12 @@ app.add_middleware(
 
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
+sqs = boto3.client(
+    'sqs',
+    aws_access_key_id=AWS_ACESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=REGION
+)
 
 # Dependency to get DB session
 def get_session():
@@ -99,7 +107,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 # Scheduler for deadline detection mecanism
 scheduler = BackgroundScheduler()
-
+backgroundTasks = BackgroundTasks()
 
 def update_scholarship_status():
     with Session(engine) as session:
@@ -112,6 +120,11 @@ def update_scholarship_status():
         ).all()
 
         for scholarship in scholarships:
+            # message = {
+            #     "scholarship_id": scholarship.id,
+            #     "timestamp": datetime.now().timestamp()
+            # }
+            # backgroundTasks.add_task(send_to_sqs, message)
             scholarship.status = models.ScholarshipStatus.jury_evaluation
             session.add(scholarship)
 
@@ -122,6 +135,40 @@ scheduler.add_job(
     update_scholarship_status, "interval", seconds=60
 )  # updates every minute
 scheduler.start()
+
+def send_to_sqs(message: dict):
+    print(AWS_ACESS_KEY_ID, AWS_SECRET_ACCESS_KEY, REGION)
+    response = sqs.send_message(
+        QueueUrl=QUEUE_URL,
+        MessageBody=json.dumps(message),
+    )
+    print(f"Message sent to SQS: {response['MessageId']}")
+    return response
+
+def read_sqs():
+    response = sqs.receive_message(
+        QueueUrl=QUEUE_URL,
+        MaxNumberOfMessages=1,
+        WaitTimeSeconds=5,
+    )
+    messages = response.get('Messages', [])
+    for message in messages:
+        body = json.loads(message['Body'])
+        print(f"Scholarship ID: {body.get('scholarship_id')}, Timestamp: {body.get('timestamp')}")
+    return response
+
+@app.get("/sqsTestSend")
+def testSend_sqs():
+    message = {
+        "scholarship_id": 1,
+        "timestamp": datetime.now().timestamp()
+    }
+    send_to_sqs(message)
+    return {"status": "ok"}
+
+@app.get("/sqsTestRead")
+def testRead_sqs():
+    return read_sqs()
 
 
 @app.get("/health")
