@@ -33,7 +33,7 @@ COPY ./requirements.txt ./
 COPY ./wait_for_db.py ./
 
 # Expose the port FastAPI runs on
-EXPOSE 8000
+EXPOSE 8001
 
 # Install dependencies
 # RUN pip install --no-cache-dir -r requirements.txt

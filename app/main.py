@@ -31,7 +31,6 @@ DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
 SECRET_KEY = str(os.getenv("SECRET_KEY", "K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf"))
 REGION = str(os.getenv("REGION"))
 USER_POOL_ID = str(os.getenv("USER_POOL_ID"))
-CLIENT_ID = str(os.getenv("CLIENT_ID"))
 FRONTEND_URL = str(os.getenv("FRONTEND_URL"))
 COGNITO_KEYS_URL = (
     f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
@@ -200,12 +199,12 @@ def create_dummy_scholarships(db: SessionDep):
     jury_to_create = ["Dr. Alice", "Dr. Bob", "Dr. Carol"]
     jury = {}
 
-    for jury_name in jury_to_create:
+    for id, jury_name in enumerate(jury_to_create):
         juror = db.exec(
             select(models.Jury).where(models.Jury.name == jury_name)
         ).first()
         if not juror:
-            juror = models.Jury(name=jury_name)
+            juror = models.Jury(id=str(id), name=jury_name)
             db.add(juror)
             db.commit()
             db.refresh(juror)
@@ -217,6 +216,7 @@ def create_dummy_scholarships(db: SessionDep):
             name="Scholarship A",
             description="A brief description of Scholarship A.",
             publisher="University of XYZ",
+            spots=1,
             scientific_areas=[
                 scientific_areas["Biology"]
             ],  # Change this if you have scientific area data
@@ -233,6 +233,7 @@ def create_dummy_scholarships(db: SessionDep):
             name="Scholarship B",
             description="A brief description of Scholarship B.",
             publisher="Institute of ABC",
+            spots=1,
             scientific_areas=[
                 scientific_areas["Computer Science"],
                 scientific_areas["Physics"],
@@ -250,6 +251,7 @@ def create_dummy_scholarships(db: SessionDep):
             name="Scholarship C",
             description="A brief description of Scholarship C.",
             publisher="Bla bla",
+            spots=1,
             scientific_areas=[
                 scientific_areas["Computer Science"],
                 scientific_areas["Physics"],
@@ -260,7 +262,7 @@ def create_dummy_scholarships(db: SessionDep):
             created_at=datetime.today(),
             approved_at=None,
             results_at=None,
-            status=models.ScholarshipStatus.closed,
+            status=models.ScholarshipStatus.under_review,
             edict_id=None,
         ),
     ]
@@ -486,7 +488,7 @@ def create_proposal(
         spots=spots,
         jury=associated_jury,
         deadline=deadline,
-        status=models.ScholarshipStatus.open,
+        status=models.ScholarshipStatus.under_review,
         edict_id=new_edict.id,
         scientific_areas=associated_scientific_areas,
     )
@@ -673,11 +675,34 @@ def submit_proposal(proposal_id: int, db: SessionDep, token: TokenDep):
             detail="At least one document must be associated if the proposal.",
         )
 
-    # Update proposal status to "under_review"
     proposal.status = models.ScholarshipStatus.under_review
     db.commit()
     return {"message": "Proposal submitted successfully. It will be reviewed shortly."}
 
+@app.put("/scholarships/secretary/status")
+def accept_sholarship_proposal(scholarship_id: int, accepted: bool, db: SessionDep, token: TokenDep):
+    # update scholarship status to under review
+    scholarship = db.get(models.Scholarship, scholarship_id)
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    
+    if accepted:
+        scholarship.status = models.ScholarshipStatus.open
+    else:
+        scholarship.status = models.ScholarshipStatus.draft
+
+    db.commit()
+    db.refresh(scholarship)
+    return {"message": "Scholarship status updated to under evalution (secretary)", "scholarship": scholarship}
+
+@app.get("/scholarships/secretary/under_review", response_model=List[schemas.Scholarship])
+def get_scholarships_under_review(db: SessionDep, token: TokenDep):
+    # Query the database for scholarships with the status 'under_review'
+    scholarships = (
+        db.exec(select(models.Scholarship)
+        .where(models.Scholarship.status == models.ScholarshipStatus.under_review))
+    )
+    return scholarships
 
 def get_filename_without_extension(file: Optional[UploadFile]) -> Optional[str]:
     if file is None or file.filename is None:
