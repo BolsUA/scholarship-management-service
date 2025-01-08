@@ -14,8 +14,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - REGION=us-east-1
-      - USER_POOL_ID=
-      - CLIENT_ID=
+      - USER_POOL_ID=us-east-1_BmAkOcBj4
       - FRONTEND_URL=http://localhost:3000
       - QUEUE_URL=
       - AWS_ACCESS_KEY_ID=
