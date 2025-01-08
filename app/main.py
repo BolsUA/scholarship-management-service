@@ -120,11 +120,13 @@ def update_scholarship_status():
         ).all()
 
         for scholarship in scholarships:
-            # message = {
-            #     "scholarship_id": scholarship.id,
-            #     "timestamp": datetime.now().timestamp()
-            # }
-            # backgroundTasks.add_task(send_to_sqs, message)
+            message = {
+                "scholarship_id": scholarship.id,
+                "spots": scholarship.spots,
+                "jury_ids": [jury.id for jury in scholarship.jury],
+                "closed_at": scholarship.deadline.isoformat(),
+            }
+            send_to_sqs(message)
             scholarship.status = models.ScholarshipStatus.jury_evaluation
             session.add(scholarship)
 
@@ -132,12 +134,11 @@ def update_scholarship_status():
 
 
 scheduler.add_job(
-    update_scholarship_status, "interval", seconds=60
-)  # updates every minute
+    update_scholarship_status, "interval", seconds=10
+) 
 scheduler.start()
 
 def send_to_sqs(message: dict):
-    print(AWS_ACESS_KEY_ID, AWS_SECRET_ACCESS_KEY, REGION)
     response = sqs.send_message(
         QueueUrl=QUEUE_URL,
         MessageBody=json.dumps(message),
@@ -159,7 +160,7 @@ def read_sqs():
 
 @app.get("/sqsTestSend")
 def testSend_sqs():
-    message = {
+    message = { 
         "scholarship_id": 1,
         "timestamp": datetime.now().timestamp()
     }
