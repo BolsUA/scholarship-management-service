@@ -403,7 +403,7 @@ def get_scholarship(id: int, db: SessionDep):
 
 # Combined endpoint to create a proposal and upload required documents
 @app.post("/scholarships/proposals", response_model=schemas.Scholarship)
-def create_proposal(
+async def create_proposal(
     db: SessionDep,
     token: TokenDep,
     name: str = Form(...),
@@ -454,7 +454,7 @@ def create_proposal(
             )
 
     # Create an edict record
-    new_edict = create_edict_record(db, edict_file)
+    new_edict = await create_edict_record(db, edict_file)
 
     associated_jury = []
 
@@ -704,7 +704,8 @@ def get_filename_without_extension(file: Optional[UploadFile]) -> Optional[str]:
 
 def get_file_url(filename: str) -> str:
     try:
-        # Generate pre-signed URL
+        print("Getting file URL: ", filename)
+        # Generate pre-signed URL - this is synchronous
         url = s3_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": S3_BUCKET_NAME, "Key": filename},
@@ -719,56 +720,69 @@ def get_file_url(filename: str) -> str:
         raise HTTPException(status_code=500, detail=str(e))
 
 async def save_file(file: UploadFile) -> str:
-    # Create the directory if it doesn't exist
     if not file.filename:
         raise HTTPException(status_code=400, detail="File must have a valid filename.")
-
+    
     try:
-        file_content = await file.read()
-        s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=file.filename, Body=file_content)
-        return file.filename
+        file_content = await file.read()  # This needs to be awaited as it's from FastAPI
+        key = str(file.filename)
+        # This is synchronous and doesn't need await
+        s3_client.put_object(
+            Bucket=str(S3_BUCKET_NAME),
+            Key=key,
+            Body=file_content
+        )
+        return key
     except (NoCredentialsError, PartialCredentialsError):
         raise HTTPException(status_code=500, detail="Invalid AWS credentials")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
 
-def create_edict_record(
+async def create_edict_record(
     db: Session, edict_file: UploadFile, name: Optional[str] = None
 ) -> models.Edict:
-    # Get the filename without extension and set a default name if necessary
+    if not edict_file:
+        raise HTTPException(status_code=400, detail="Edict file is required")
+
     edict_name = (
         name or get_filename_without_extension(edict_file) or "default_filename"
     )
 
-    # Save the edict file
-    edict_file_location = save_file(edict_file)
+    try:
+        # Save the edict file
+        edict_file_location = await save_file(edict_file)  # This is still async because of file.read()
+        file_url = get_file_url(edict_file_location)  # No await here
 
-    # Create the edict record
-    new_edict = models.Edict(name=edict_name, file_path=get_file_url(edict_file_location))
-    db.add(new_edict)
-    db.commit()
-    db.refresh(new_edict)
-    return new_edict
+        # Create the edict record
+        new_edict = models.Edict(name=edict_name, file_path=file_url)
+        db.add(new_edict)
+        db.commit()
+        db.refresh(new_edict)
+        return new_edict
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating edict: {str(e)}")
 
 
-def create_document(
+async def create_document(
     db: Session,
     proposal_id: int,
-    file: UploadFile,
+    file: Optional[UploadFile],
     name: str,
     required: bool = True,
     template: bool = True,
 ) -> models.DocumentTemplate:
-    # Save the document file
     file_location = ""
-    if template:
-        file_location = save_file(file)
+    file_url = ""
+    
+    if template and file:
+        file_location = await save_file(file)  # This remains async
+        file_url = get_file_url(file_location)  # No await here
 
-    # Create the document template record
     new_document = models.DocumentTemplate(
         scholarship_id=proposal_id,
         name=name,
-        file_path=get_file_url(file_location),
+        file_path=file_url,
         required=required,
         template=template,
     )
