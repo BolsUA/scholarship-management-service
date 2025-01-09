@@ -96,3 +96,7 @@ class FilterOptionsResponse(BaseModel):
     status: List[ScholarshipStatus]
     publishers: List[str]
     deadlines: List[date]
+
+class UserBasic(BaseModel):
+    id: str
+    name: str

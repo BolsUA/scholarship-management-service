@@ -70,8 +70,6 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 sqs = boto3.client(
     'sqs',
-    aws_access_key_id=AWS_ACESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=REGION
 )
 
@@ -83,6 +81,9 @@ def get_session():
 
 oauth2_scheme = HTTPBearer()
 
+cognito_client = boto3.client('cognito-idp',
+    region_name=REGION
+)
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
     token = credentials.credentials
@@ -107,6 +108,26 @@ SessionDep = Annotated[Session, Depends(get_session)]
 # Scheduler for deadline detection mecanism
 scheduler = BackgroundScheduler()
 backgroundTasks = BackgroundTasks()
+
+async def get_user_groups(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="No token provided")
+    
+    valid, token = verify_token(authorization)
+
+    if not valid:
+        raise HTTPException(status_code=401, detail=token)
+    
+    try:
+        # Get user's groups
+        groups_response = cognito_client.admin_list_groups_for_user(
+            UserPoolId=os.getenv('COGNITO_USER_POOL_ID'),
+            Username=token['username']
+        )
+        
+        return [group['GroupName'] for group in groups_response['Groups']]
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token or user not found")
 
 def update_scholarship_status():
     with Session(engine) as session:
@@ -175,107 +196,38 @@ def testRead_sqs():
 def health_check():
     return {"status": "ok"}
 
-
-@app.post("/scholarships/dummy", response_model=List[schemas.Scholarship])
-def create_dummy_scholarships(db: SessionDep):
-    areas_to_create = ["Computer Science", "Biology", "Physics"]
-    scientific_areas = {}
-
-    # Iterate over the areas to create or fetch them from the database
-    for area_name in areas_to_create:
-        statement = select(models.ScientificArea).where(
-            models.ScientificArea.name == area_name
+@app.get("/scholarships/jury-members", response_model=List[schemas.UserBasic])
+async def get_jury_members(groups: List[str] = Depends(get_user_groups)):
+    """Get all jury members - only accessible by users in the 'proposals' group"""
+    
+    if 'proposers' not in groups:
+        raise HTTPException(
+            status_code=403,
+            detail="Only users in the proposers group can access this endpoint"
         )
-        area = db.exec(statement).first()
+    
+    try:
+        # List users with the 'jury' group filter
+        response = cognito_client.list_users_in_group(
+            UserPoolId=os.getenv('COGNITO_USER_POOL_ID'),
+            GroupName='jury'
+        )
 
-        if not area:
-            area = models.ScientificArea(name=area_name)
-            db.add(area)
-            db.commit()
-            db.refresh(area)
-
-        scientific_areas[area_name] = area
-
-    # Create or get jury members
-    jury_to_create = ["Dr. Alice", "Dr. Bob", "Dr. Carol"]
-    jury = {}
-
-    for id, jury_name in enumerate(jury_to_create):
-        juror = db.exec(
-            select(models.Jury).where(models.Jury.name == jury_name)
-        ).first()
-        if not juror:
-            juror = models.Jury(id=str(id), name=jury_name)
-            db.add(juror)
-            db.commit()
-            db.refresh(juror)
-        jury[jury_name] = juror
-
-    # Define dummy scholarships
-    dummy_scholarships = [
-        models.Scholarship(
-            name="Scholarship A",
-            description="A brief description of Scholarship A.",
-            publisher="University of XYZ",
-            spots=1,
-            scientific_areas=[
-                scientific_areas["Biology"]
-            ],  # Change this if you have scientific area data
-            type="Research Initiation Scholarship",
-            jury=[jury["Dr. Alice"], jury["Dr. Bob"]],
-            deadline=date(2024, 12, 31),
-            created_at=datetime.today(),
-            approved_at=None,
-            results_at=None,
-            status=models.ScholarshipStatus.jury_evaluation,
-            edict_id=None,
-        ),
-        models.Scholarship(
-            name="Scholarship B",
-            description="A brief description of Scholarship B.",
-            publisher="Institute of ABC",
-            spots=1,
-            scientific_areas=[
-                scientific_areas["Computer Science"],
-                scientific_areas["Physics"],
-            ],  # Change this if you have scientific area data
-            type="Research Scholarship",
-            jury=[jury["Dr. Carol"]],
-            deadline=date(2024, 11, 15),
-            created_at=datetime.today(),
-            approved_at=None,
-            results_at=None,
-            status=models.ScholarshipStatus.open,
-            edict_id=None,
-        ),
-        models.Scholarship(
-            name="Scholarship C",
-            description="A brief description of Scholarship C.",
-            publisher="Bla bla",
-            spots=1,
-            scientific_areas=[
-                scientific_areas["Computer Science"],
-                scientific_areas["Physics"],
-            ],  # Change this if you have scientific area data
-            type="Research Scholarship",
-            jury=[jury["Dr. Alice"], jury["Dr. Carol"]],
-            deadline=date(2024, 11, 15),
-            created_at=datetime.today(),
-            approved_at=None,
-            results_at=None,
-            status=models.ScholarshipStatus.under_review,
-            edict_id=None,
-        ),
-    ]
-
-    # Insert dummy scholarships into the database
-    db.add_all(dummy_scholarships)
-    db.commit()
-    # Refresh each scholarship individually
-    for scholarship in dummy_scholarships:
-        db.refresh(scholarship)
-
-    return dummy_scholarships
+        jury_members = []
+        for user in response['Users']:
+            attributes = {
+                attr['Name']: attr['Value']
+                for attr in user['Attributes']
+            }
+            
+            jury_members.append(schemas.UserBasic(
+                id=user['Username'],
+                name=attributes.get('name', user['Username'])
+            ))
+            
+        return jury_members
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error fetching jury members")
 
 @app.put("/scholarships/{scholarship_id}/status/jury_evaluation")
 def update_scholarship_status_to_jury_evaluation(scholarship_id: int, db: SessionDep):
