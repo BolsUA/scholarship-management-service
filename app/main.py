@@ -259,6 +259,13 @@ def update_scholarship_status_to_jury_evaluation(scholarship_id: int, db: Sessio
     if not scholarship:
         raise HTTPException(status_code=404, detail="Scholarship not found")
     
+    message = {
+        "scholarship_id": scholarship.id,
+        "spots": scholarship.spots,
+        "jury_ids": [jury.id for jury in scholarship.jury],
+        "closed_at": scholarship.deadline.isoformat(),
+    }
+    send_to_sqs(message)
     scholarship.status = models.ScholarshipStatus.jury_evaluation
     db.commit()
     db.refresh(scholarship)
