@@ -499,7 +499,7 @@ async def create_proposal(
         template_flag = (
             document_template[idx] if document_template else False
         )  # Default to False if not provided
-        create_document(db, new_proposal.id, file, name, required_flag, template_flag)
+        await create_document(db, new_proposal.id, file, name, required_flag, template_flag)
 
     return new_proposal
 
@@ -775,7 +775,7 @@ async def create_document(
     file_location = ""
     file_url = ""
     
-    if template and file:
+    if template:
         file_location = await save_file(file)  # This remains async
         file_url = get_file_url(file_location)  # No await here
 
