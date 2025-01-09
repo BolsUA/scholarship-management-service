@@ -41,6 +41,6 @@ RUN pip install -r requirements.txt
 
 USER appuser
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8001"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 # Run this command to set env variables in the docker container
 # docker build --build-arg REGION=${"region"}  --build-arg USER_POOL_ID=${"user_pool_id"} --build-arg CLIENT_ID=${"user_pool_client_id"} --build-arg FRONTEND_URL=https://${"frontend_url"} -t ${container} /path/to/Dockerfile
