@@ -138,7 +138,7 @@ async def get_user_groups(authorization: str = Header(None)):
     try:
         # Get user's groups
         groups_response = cognito_client.admin_list_groups_for_user(
-            UserPoolId=os.getenv('COGNITO_USER_POOL_ID'),
+            UserPoolId=os.getenv('USER_POOL_ID'),
             Username=token['username']
         )
         
@@ -226,7 +226,7 @@ async def get_jury_members(groups: List[str] = Depends(get_user_groups)):
     try:
         # List users with the 'jury' group filter
         response = cognito_client.list_users_in_group(
-            UserPoolId=os.getenv('COGNITO_USER_POOL_ID'),
+            UserPoolId=os.getenv('USER_POOL_ID'),
             GroupName='jury'
         )
 
@@ -298,10 +298,18 @@ def get_scholarships(
 
     statement = select(models.Scholarship)
 
-    if name:
-        statement = statement.where(models.Scholarship.name.ilike(f"%{name}%"))
     if status:
         statement = statement.where(models.Scholarship.status.in_(status))
+    elif not publisher:  # If no status filter and no publisher, apply default status filter
+        default_statuses = [
+            models.ScholarshipStatus.open,
+            models.ScholarshipStatus.jury_evaluation,
+            models.ScholarshipStatus.closed
+        ]
+        statement = statement.where(models.Scholarship.status.in_(default_statuses))
+
+    if name:
+        statement = statement.where(models.Scholarship.name.ilike(f"%{name}%"))
     if publisher:
         statement = statement.where(models.Scholarship.publisher == publisher)
     if types:
