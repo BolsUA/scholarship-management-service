@@ -2,6 +2,7 @@ import boto3
 import json
 import os
 import shutil
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Optional, Dict
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI):
     yield
 
 QUEUE_URL = str(os.getenv("QUEUE_URL"))
-
+S3_BUCKET_NAME = str(os.getenv("S3_BUCKET_NAME", "bolsua-storage-dev"))
 DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
 SECRET_KEY = str(os.getenv("SECRET_KEY", "K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf"))
 REGION = str(os.getenv("REGION"))
@@ -81,6 +82,11 @@ oauth2_scheme = HTTPBearer()
 
 cognito_client = boto3.client('cognito-idp',
     region_name=REGION
+)
+
+s3_client = boto3.client(
+    "s3",
+    region_name=REGION,
 )
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
@@ -689,30 +695,35 @@ def get_filename_without_extension(file: Optional[UploadFile]) -> Optional[str]:
     filename, _ = os.path.splitext(file.filename)
     return filename
 
+def get_file_url(filename: str) -> str:
+    try:
+        # Generate pre-signed URL
+        url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": S3_BUCKET_NAME, "Key": filename},
+            ExpiresIn=100000,
+        )
+        return url
+    except s3_client.exceptions.NoSuchKey:
+        raise HTTPException(status_code=404, detail=f"File {filename} not found in bucket.")
+    except (NoCredentialsError, PartialCredentialsError):
+        raise HTTPException(status_code=500, detail="Invalid AWS credentials")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-def save_file(file: UploadFile, directory: str) -> str:
+async def save_file(file: UploadFile) -> str:
     # Create the directory if it doesn't exist
     if not file.filename:
         raise HTTPException(status_code=400, detail="File must have a valid filename.")
 
-    os.makedirs(directory, exist_ok=True)
-
-    # Sanitize the filename to prevent directory traversal attacks
-    filename = os.path.basename(file.filename)
-    if filename != file.filename or ".." in filename or filename.startswith("/"):
-        raise HTTPException(status_code=400, detail="Invalid filename.")
-
-    file_path = os.path.join(directory, filename)
-
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Could not save file.")
-
-    file_path = os.path.join(directory, file.filename)
-    return file_path
-
+        file_content = await file.read()
+        s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=file.filename, Body=file_content)
+        return file.filename
+    except (NoCredentialsError, PartialCredentialsError):
+        raise HTTPException(status_code=500, detail="Invalid AWS credentials")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def create_edict_record(
     db: Session, edict_file: UploadFile, name: Optional[str] = None
@@ -723,10 +734,10 @@ def create_edict_record(
     )
 
     # Save the edict file
-    edict_file_location = save_file(edict_file, "edict_files")
+    edict_file_location = save_file(edict_file)
 
     # Create the edict record
-    new_edict = models.Edict(name=edict_name, file_path=edict_file_location)
+    new_edict = models.Edict(name=edict_name, file_path=get_file_url(edict_file_location))
     db.add(new_edict)
     db.commit()
     db.refresh(new_edict)
@@ -744,13 +755,13 @@ def create_document(
     # Save the document file
     file_location = ""
     if template:
-        file_location = save_file(file, "application_files")
+        file_location = save_file(file)
 
     # Create the document template record
     new_document = models.DocumentTemplate(
         scholarship_id=proposal_id,
         name=name,
-        file_path=file_location,
+        file_path=get_file_url(file_location),
         required=required,
         template=template,
     )
