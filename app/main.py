@@ -171,7 +171,7 @@ def testRead_sqs():
     return read_sqs()
 
 
-@app.get("/health")
+@app.get("/scholarships/health")
 def health_check():
     return {"status": "ok"}
 
