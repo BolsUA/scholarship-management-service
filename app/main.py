@@ -5,7 +5,7 @@ import shutil
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Annotated, Optional, Dict
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends, UploadFile, File, Form, Query
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends, Header, UploadFile, File, Form, Query
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, SQLModel, select
 from .database import engine
@@ -260,7 +260,7 @@ def get_scholarships_for_jury_member(
 
 
 # Endpoint to retrieve all scholarships
-@app.get("/scholarships/", response_model=List[schemas.Scholarship])
+@app.get("/scholarships", response_model=List[schemas.Scholarship])
 def get_scholarships(
     db: SessionDep,
     page: int = 1,
