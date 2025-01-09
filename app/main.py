@@ -98,6 +98,25 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth2_sche
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+def verify_token_string(token: str):
+    if not token.startswith('Bearer '):
+        return False, "Invalid token format"
+    
+    token = token.split(' ')[1]
+
+    try:
+        # Fetch public keys from AWS Cognito
+        jwks_client = PyJWKClient(COGNITO_KEYS_URL)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+        # Decode and validate the token
+        payload = jwt.decode(token, signing_key.key, algorithms=["RS256"])
+        return True, payload
+    except jwt.ExpiredSignatureError:
+        return False, "Token expired"
+    except Exception:
+        return False, "Invalid token"
 
 
 TokenDep = Annotated[Dict, Depends(verify_token)]
@@ -111,7 +130,7 @@ async def get_user_groups(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="No token provided")
     
-    valid, token = verify_token(authorization)
+    valid, token = verify_token_string(authorization)
 
     if not valid:
         raise HTTPException(status_code=401, detail=token)
