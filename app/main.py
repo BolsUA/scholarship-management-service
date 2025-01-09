@@ -24,8 +24,6 @@ async def lifespan(app: FastAPI):
     yield
 
 QUEUE_URL = str(os.getenv("QUEUE_URL"))
-AWS_ACESS_KEY_ID = str(os.getenv("AWS_ACCESS_KEY_ID"))
-AWS_SECRET_ACCESS_KEY = str(os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 DATABASE_URL = str(os.getenv("DATABASE_URL", "sqlite:///todo.db"))
 SECRET_KEY = str(os.getenv("SECRET_KEY", "K%!MaoL26XQe8iGAAyDrmbkw&bqE$hCPw4hSk!Hf"))
@@ -70,8 +68,6 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 sqs = boto3.client(
     'sqs',
-    aws_access_key_id=AWS_ACESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=REGION
 )
 
